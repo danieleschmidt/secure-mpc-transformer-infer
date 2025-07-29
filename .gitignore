@@ -205,3 +205,35 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Security & MPC specific
+*.key
+*.crt
+*.pem
+keys/
+certs/
+secrets/
+*.secret
+*.keyfile
+
+# CUDA build artifacts
+*.o
+*.a
+*.ptx
+*.cubin
+
+# Model files (large)
+*.bin
+*.safetensors
+models/
+checkpoints/
+
+# Benchmarking results
+benchmarks/results/
+*.benchmark
+*.perf
+
+# MPC protocol files
+protocol_data/
+shares/
+temp_shares/
