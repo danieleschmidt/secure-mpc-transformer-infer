@@ -1,0 +1,68 @@
+# Prometheus configuration for secure MPC transformer monitoring
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'mpc-transformer'
+    environment: 'production'
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "rules/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Monitor the application itself
+  - job_name: 'mpc-transformer'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    honor_labels: true
+
+  # Monitor GPU metrics
+  - job_name: 'gpu-metrics'
+    static_configs:
+      - targets: ['localhost:9445']
+    scrape_interval: 5s
+    
+  # Monitor system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 15s
+
+  # Monitor container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['localhost:8080']
+    scrape_interval: 10s
+    
+  # Monitor Redis (for secret sharing coordination)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['localhost:9121']
+    scrape_interval: 15s
+
+  # Monitor MPC protocol specific metrics
+  - job_name: 'mpc-protocols'
+    static_configs:
+      - targets: ['localhost:9091', 'localhost:9092', 'localhost:9093']
+    scrape_interval: 5s
+    metrics_path: /mpc/metrics
+    params:
+      protocol: ['aby3']
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Remote write for long-term storage (optional)
+remote_write:
+  - url: "http://prometheus-remote-storage:8086/api/v1/prom/write"
+    queue_config:
+      max_samples_per_send: 10000
+      batch_send_deadline: 5s

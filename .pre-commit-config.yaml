@@ -1,37 +1,102 @@
+# Enhanced pre-commit hooks for secure MPC transformer development
+# Install with: pip install pre-commit && pre-commit install
+
 repos:
+  # Core code quality and formatting
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-      - id: check-added-large-files
-      - id: check-merge-conflict
+        args: [--unsafe]
       - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=5120]  # 5MB limit
+      - id: check-case-conflict
       - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
 
+  # Python formatting and linting
   - repo: https://github.com/psf/black
-    rev: 23.7.0
+    rev: 24.4.2
     hooks:
       - id: black
         language_version: python3.10
+        args: [--line-length=88]
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile, black, --line-length, "88"]
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.287
+    rev: v0.4.10
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
 
+  # Type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.5.1
+    rev: v1.10.0
     hooks:
       - id: mypy
-        additional_dependencies: [types-all]
+        additional_dependencies: [types-requests, types-setuptools]
+        args: [--ignore-missing-imports]
 
+  # Security scanning
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        args: [-r, src/, -ll]
+        exclude: tests/
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: .*\.md$
+
+  # Container security
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        files: docker/Dockerfile.*
+
+  # Documentation quality
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.41.0
+    hooks:
+      - id: markdownlint
+        args: [--fix]
+        exclude: CHANGELOG.md
+
+  # Enhanced security checks
   - repo: local
     hooks:
-      - id: security-check
-        name: Security Check
-        entry: bash -c 'grep -r "private_key\|secret_key\|api_key" --include="*.py" src/ tests/ || true'
+      - id: crypto-security-check
+        name: Cryptographic Security Check
+        entry: bash -c 'find . -name "*.py" -exec grep -l "private_key\|secret_key\|api_key\|password\|token" {} \; | head -10 || true'
         language: system
         pass_filenames: false
+        
+      - id: mpc-protocol-validation
+        name: MPC Protocol Security Validation
+        entry: bash -c 'grep -r "TODO.*security\|FIXME.*crypto" --include="*.py" src/ || true'
+        language: system
+        pass_filenames: false
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+  autofix_prs: true
+  autoupdate_schedule: weekly
+  skip: [mypy, bandit]  # Skip resource-intensive checks in CI
