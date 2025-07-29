@@ -1,0 +1,302 @@
+# Semgrep rules for Secure MPC Transformer
+# Custom security rules for multi-party computation systems
+
+rules:
+  # Cryptographic Security Rules
+  - id: hardcoded-crypto-key
+    pattern-either:
+      - pattern: |
+          $KEY = "..."
+      - pattern: |
+          $KEY = b"..."
+      - pattern: |
+          key = "..."
+      - pattern: |
+          private_key = "..."
+    message: "Hardcoded cryptographic key detected. Use secure key management."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: weak-random-crypto
+    pattern-either:
+      - pattern: random.random()
+      - pattern: random.randint(...)
+      - pattern: random.choice(...)
+      - pattern: numpy.random.rand(...)
+      - pattern: torch.rand(...)
+    message: "Use cryptographically secure random for security operations. Use secrets.SystemRandom or os.urandom."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator"
+      confidence: MEDIUM
+
+  - id: insecure-hash-algorithm
+    pattern-either:
+      - pattern: hashlib.md5(...)
+      - pattern: hashlib.sha1(...)
+    message: "Insecure hash algorithm. Use SHA-256 or higher for cryptographic purposes."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      confidence: HIGH
+
+  # MPC-Specific Security Rules
+  - id: timing-attack-vulnerability
+    pattern-either:
+      - pattern: |
+          if $SECRET == $INPUT:
+              ...
+      - pattern: |
+          if $SECRET != $INPUT:
+              ...
+      - pattern: |
+          return $SECRET == $INPUT
+    message: "Potential timing attack vulnerability. Use constant-time comparison for secrets."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-208: Observable Timing Discrepancy"
+      confidence: MEDIUM
+
+  - id: secret-in-log
+    pattern-either:
+      - pattern: |
+          logging.$METHOD(..., $SECRET, ...)
+      - pattern: |
+          print(..., $SECRET, ...)
+      - pattern: |
+          logger.$METHOD(..., $SECRET, ...)
+    message: "Potential secret leakage in logs. Ensure sensitive data is not logged."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: LOW
+
+  - id: unencrypted-network-communication
+    pattern-either:
+      - pattern: |
+          socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      - pattern: |
+          requests.get("http://...")
+      - pattern: |
+          requests.post("http://...")
+      - pattern: |
+          urllib.request.urlopen("http://...")
+    message: "Unencrypted network communication detected. Use HTTPS/TLS for MPC protocols."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+      confidence: MEDIUM
+
+  # Input Validation Rules
+  - id: sql-injection-risk
+    pattern-either:
+      - pattern: |
+          cursor.execute("... " + $VAR + " ...")
+      - pattern: |
+          cursor.execute(f"... {$VAR} ...")
+      - pattern: |
+          cursor.execute("... %s ..." % $VAR)
+    message: "Potential SQL injection vulnerability. Use parameterized queries."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
+      confidence: HIGH
+
+  - id: path-traversal-risk
+    pattern-either:
+      - pattern: |
+          open($USER_INPUT, ...)
+      - pattern: |
+          Path($USER_INPUT)
+      - pattern: |
+          os.path.join($BASE, $USER_INPUT)
+    message: "Potential path traversal vulnerability. Validate and sanitize file paths."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory"
+      confidence: LOW
+
+  # Memory Safety Rules
+  - id: memory-not-cleared
+    pattern: |
+      $SECRET = ...
+      ...
+      del $SECRET
+    message: "Consider using secure memory clearing for sensitive data."
+    languages: [python]
+    severity: INFO
+    metadata:
+      category: security
+      cwe: "CWE-244: Improper Clearing of Heap Memory Before Release"
+      confidence: LOW
+
+  # Pickle Security Rules
+  - id: unsafe-pickle-load
+    pattern-either:
+      - pattern: pickle.load(...)
+      - pattern: pickle.loads(...)
+      - pattern: cPickle.load(...)
+      - pattern: cPickle.loads(...)
+    message: "Unsafe pickle usage. Only load from trusted sources or use safer serialization."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  # Exception Handling Rules
+  - id: exception-information-disclosure
+    pattern: |
+      except $EXCEPTION as $E:
+          ...
+          print($E)
+          ...
+    message: "Exception details might leak sensitive information. Log carefully."
+    languages: [python]
+    severity: INFO
+    metadata:
+      category: security
+      cwe: "CWE-209: Information Exposure Through Error Messages"
+      confidence: LOW
+
+  # Configuration Security Rules
+  - id: debug-mode-enabled
+    pattern-either:
+      - pattern: DEBUG = True
+      - pattern: debug=True
+      - pattern: app.debug = True
+    message: "Debug mode should not be enabled in production."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-489: Active Debug Code"
+      confidence: HIGH
+
+  # SSL/TLS Security Rules
+  - id: ssl-verification-disabled
+    pattern-either:
+      - pattern: |
+          requests.$METHOD(..., verify=False, ...)
+      - pattern: |
+          ssl.create_default_context().check_hostname = False
+      - pattern: |
+          ssl._create_unverified_context()
+    message: "SSL/TLS verification disabled. This creates security vulnerabilities."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+
+  # JWT Security Rules
+  - id: jwt-none-algorithm
+    pattern-either:
+      - pattern: |
+          jwt.decode(..., algorithm="none", ...)
+      - pattern: |
+          jwt.encode(..., algorithm="none", ...)
+    message: "JWT 'none' algorithm allows token forgery. Use secure algorithms."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-347: Improper Verification of Cryptographic Signature"
+      confidence: HIGH
+
+  # Shell Command Injection Rules
+  - id: shell-injection-risk
+    pattern-either:
+      - pattern: |
+          os.system($USER_INPUT)
+      - pattern: |
+          subprocess.call($USER_INPUT, shell=True)
+      - pattern: |
+          subprocess.run($USER_INPUT, shell=True)
+      - pattern: |
+          subprocess.Popen($USER_INPUT, shell=True)
+    message: "Potential shell injection vulnerability. Validate and sanitize inputs."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-78: Improper Neutralization of Special Elements used in an OS Command"
+      confidence: HIGH
+
+  # XML Security Rules
+  - id: xml-external-entity
+    pattern-either:
+      - pattern: |
+          xml.etree.ElementTree.parse(...)
+      - pattern: |
+          xml.etree.ElementTree.fromstring(...)
+      - pattern: |
+          xml.sax.parse(...)
+    message: "XML parsing without protection against XXE attacks. Use secure XML parsers."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-611: Improper Restriction of XML External Entity Reference"
+      confidence: MEDIUM
+
+  # Network Security Rules
+  - id: bind-all-interfaces
+    pattern-either:
+      - pattern: |
+          $SOCKET.bind(("0.0.0.0", $PORT))
+      - pattern: |
+          $SOCKET.bind(("", $PORT))
+      - pattern: |
+          app.run(host="0.0.0.0", ...)
+    message: "Binding to all interfaces (0.0.0.0) may expose service unnecessarily."
+    languages: [python]
+    severity: INFO
+    metadata:
+      category: security
+      cwe: "CWE-200: Information Exposure"
+      confidence: LOW
+
+  # Flask/Web Security Rules
+  - id: flask-debug-mode
+    pattern: |
+      app.run(debug=True, ...)
+    message: "Flask debug mode should not be enabled in production."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-489: Active Debug Code"
+      confidence: HIGH
+
+  # Regular Expression DoS Rules
+  - id: regex-dos-risk
+    pattern: |
+      re.match(r"(.*)*", $INPUT)
+    message: "Potential ReDoS vulnerability with exponential time complexity."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-1333: Inefficient Regular Expression Complexity"
+      confidence: MEDIUM

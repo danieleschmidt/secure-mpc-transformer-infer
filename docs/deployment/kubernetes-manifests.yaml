@@ -1,0 +1,662 @@
+# Kubernetes manifests for Secure MPC Transformer production deployment
+# This file contains all necessary Kubernetes resources for deploying the system
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mpc-transformer
+  labels:
+    name: mpc-transformer
+    environment: production
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mpc-transformer-sa
+  namespace: mpc-transformer
+automountServiceAccountToken: true
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: mpc-transformer
+  name: mpc-transformer-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mpc-transformer-rolebinding
+  namespace: mpc-transformer
+subjects:
+- kind: ServiceAccount
+  name: mpc-transformer-sa
+  namespace: mpc-transformer
+roleRef:
+  kind: Role
+  name: mpc-transformer-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mpc-config
+  namespace: mpc-transformer
+data:
+  protocol.yaml: |
+    protocol: aby3
+    security_level: 128
+    num_parties: 3
+    timeout: 30
+    crypto:
+      field_size: 128
+      key_length: 2048
+      use_preprocessing: true
+    network:
+      buffer_size: 8192
+      max_connections: 100
+      keepalive: true
+  
+  logging.yaml: |
+    version: 1
+    formatters:
+      json:
+        format: '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}'
+      detailed:
+        format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    handlers:
+      console:
+        class: logging.StreamHandler
+        level: INFO
+        formatter: json
+        stream: ext://sys.stdout
+      file:
+        class: logging.handlers.RotatingFileHandler
+        filename: /app/logs/mpc-transformer.log
+        maxBytes: 10485760
+        backupCount: 5
+        level: DEBUG
+        formatter: detailed
+    loggers:
+      secure_mpc_transformer:
+        level: DEBUG
+        handlers: [console, file]
+        propagate: false
+      grpc:
+        level: WARNING
+        handlers: [console]
+        propagate: false
+    root:
+      level: INFO
+      handlers: [console]
+  
+  nginx.conf: |
+    upstream mpc_backend {
+        least_conn;
+        server mpc-transformer-0.mpc-service.mpc-transformer.svc.cluster.local:8080 weight=1 max_fails=3 fail_timeout=30s;
+        server mpc-transformer-1.mpc-service.mpc-transformer.svc.cluster.local:8080 weight=1 max_fails=3 fail_timeout=30s;
+        server mpc-transformer-2.mpc-service.mpc-transformer.svc.cluster.local:8080 weight=1 max_fails=3 fail_timeout=30s;
+    }
+    
+    server {
+        listen 8080;
+        
+        location / {
+            proxy_pass http://mpc_backend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+        
+        location /health {
+            proxy_pass http://mpc_backend;
+            access_log off;
+        }
+        
+        location /metrics {
+            proxy_pass http://mpc_backend;
+            access_log off;
+        }
+    }
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mpc-tls-certs
+  namespace: mpc-transformer
+type: kubernetes.io/tls
+data:
+  # Base64 encoded certificates - replace with actual values
+  tls.crt: |
+    LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi4uLgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0t
+  tls.key: |
+    LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCi4uLgotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0t
+  ca.crt: |
+    LS0tLS1CRUdJTiBDRVJUSUlGSUNBVEUtLS0tLQouLi4KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ==
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mpc-api-keys
+  namespace: mpc-transformer
+type: Opaque
+data:
+  # Base64 encoded API keys - replace with actual values
+  jwt_secret: <base64-encoded-jwt-secret>
+  encryption_key: <base64-encoded-encryption-key>
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mpc-transformer
+  namespace: mpc-transformer
+  labels:
+    app: mpc-transformer
+    version: v1.0.0
+spec:
+  serviceName: mpc-service
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mpc-transformer
+  template:
+    metadata:
+      labels:
+        app: mpc-transformer
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: mpc-transformer-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+      - name: init-wait-for-peers
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Waiting for peer services to be ready..."
+          for i in 0 1 2; do
+            if [ "$i" != "$(echo $HOSTNAME | sed 's/.*-//')" ]; then
+              echo "Checking mpc-transformer-$i.mpc-service..."
+              until nslookup mpc-transformer-$i.mpc-service.mpc-transformer.svc.cluster.local; do
+                echo "Waiting for mpc-transformer-$i.mpc-service..."
+                sleep 2
+              done
+            fi
+          done
+          echo "All peer services are ready!"
+      containers:
+      - name: mpc-transformer
+        image: ghcr.io/yourusername/secure-mpc-transformer:latest-gpu
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 50051
+          name: grpc
+          protocol: TCP
+        env:
+        - name: MPC_PARTY_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['mpc.party.id']
+        - name: MPC_NUM_PARTIES
+          value: "3"
+        - name: MPC_PROTOCOL
+          value: "aby3"
+        - name: MPC_PEERS
+          value: "mpc-transformer-0.mpc-service:50051,mpc-transformer-1.mpc-service:50051,mpc-transformer-2.mpc-service:50051"
+        - name: CUDA_VISIBLE_DEVICES
+          value: "0"
+        - name: GPU_MEMORY_FRACTION
+          value: "0.8"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: mpc-api-keys
+              key: jwt_secret
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mpc-api-keys
+              key: encryption_key
+        resources:
+          requests:
+            memory: "16Gi"
+            cpu: "4"
+            nvidia.com/gpu: 1
+          limits:
+            memory: "32Gi"
+            cpu: "8"
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        - name: tls-certs
+          mountPath: /app/certs
+          readOnly: true
+        - name: logs
+          mountPath: /app/logs
+        - name: data
+          mountPath: /app/data
+        - name: tmp
+          mountPath: /tmp
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+            httpHeaders:
+            - name: User-Agent
+              value: "k8s-liveness-probe"
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+            httpHeaders:
+            - name: User-Agent
+              value: "k8s-readiness-probe"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+            httpHeaders:
+            - name: User-Agent
+              value: "k8s-startup-probe"
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: config
+        configMap:
+          name: mpc-config
+          defaultMode: 0644
+      - name: tls-certs
+        secret:
+          secretName: mpc-tls-certs
+          defaultMode: 0600
+      - name: tmp
+        emptyDir:
+          sizeLimit: 1Gi
+      nodeSelector:
+        node-type: gpu-enabled
+      tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - mpc-transformer
+              topologyKey: kubernetes.io/hostname
+  volumeClaimTemplates:
+  - metadata:
+      name: logs
+      labels:
+        app: mpc-transformer
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: fast-ssd
+  - metadata:
+      name: data
+      labels:
+        app: mpc-transformer
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Gi
+      storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mpc-service
+  namespace: mpc-transformer
+  labels:
+    app: mpc-transformer
+spec:
+  selector:
+    app: mpc-transformer
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: grpc
+    port: 50051
+    targetPort: 50051
+    protocol: TCP
+  clusterIP: None
+  publishNotReadyAddresses: true
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mpc-lb
+  namespace: mpc-transformer
+  labels:
+    app: mpc-transformer
+    service-type: load-balancer
+spec:
+  type: LoadBalancer
+  selector:
+    app: mpc-transformer
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 8080
+    protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-proxy
+  namespace: mpc-transformer
+  labels:
+    app: nginx-proxy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-proxy
+  template:
+    metadata:
+      labels:
+        app: nginx-proxy
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.24-alpine
+        ports:
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+        - name: tls-certs
+          mountPath: /etc/nginx/ssl
+          readOnly: true
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: mpc-config
+          items:
+          - key: nginx.conf
+            path: nginx.conf
+      - name: tls-certs
+        secret:
+          secretName: mpc-tls-certs
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-proxy-service
+  namespace: mpc-transformer
+  labels:
+    app: nginx-proxy
+spec:
+  selector:
+    app: nginx-proxy
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mpc-ingress
+  namespace: mpc-transformer
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - mpc-transformer.yourdomain.com
+    secretName: mpc-ingress-tls
+  rules:
+  - host: mpc-transformer.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-proxy-service
+            port:
+              number: 80
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mpc-network-policy
+  namespace: mpc-transformer
+spec:
+  podSelector:
+    matchLabels:
+      app: mpc-transformer
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from nginx proxy
+  - from:
+    - podSelector:
+        matchLabels:
+          app: nginx-proxy
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Allow inter-party communication
+  - from:
+    - podSelector:
+        matchLabels:
+          app: mpc-transformer
+    ports:
+    - protocol: TCP
+      port: 50051
+  # Allow monitoring
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow inter-party communication
+  - to:
+    - podSelector:
+        matchLabels:
+          app: mpc-transformer
+    ports:
+    - protocol: TCP
+      port: 50051
+  # Allow external HTTPS (for downloading models, etc.)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mpc-pdb
+  namespace: mpc-transformer
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: mpc-transformer
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mpc-hpa
+  namespace: mpc-transformer
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: mpc-transformer
+  minReplicas: 3
+  maxReplicas: 6
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+
+---
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: mpc-service-monitor
+  namespace: mpc-transformer
+  labels:
+    app: mpc-transformer
+spec:
+  selector:
+    matchLabels:
+      app: mpc-transformer
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'go_.*'
+      action: drop

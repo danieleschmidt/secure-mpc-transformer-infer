@@ -1,0 +1,143 @@
+# Multi-stage GPU-enabled Docker image for Secure MPC Transformer
+# Requires NVIDIA Container Toolkit and CUDA 12.0+
+
+FROM nvidia/cuda:12.0-devel-ubuntu22.04 as base
+
+# Metadata
+LABEL org.opencontainers.image.title="Secure MPC Transformer (GPU)"
+LABEL org.opencontainers.image.description="GPU-accelerated container for secure multi-party computation transformer inference"
+LABEL org.opencontainers.image.source="https://github.com/yourusername/secure-mpc-transformer"
+LABEL org.opencontainers.image.licenses="MIT"
+
+# Environment variables for CUDA
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 \
+    python3.10-dev \
+    python3-pip \
+    python3.10-venv \
+    build-essential \
+    cmake \
+    pkg-config \
+    git \
+    wget \
+    curl \
+    libssl-dev \
+    libffi-dev \
+    libprotobuf-dev \
+    protobuf-compiler \
+    libnccl2 \
+    libnccl-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Install cuDNN
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcudnn8 \
+    libcudnn8-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create symbolic links for Python
+RUN ln -sf /usr/bin/python3.10 /usr/bin/python3 && \
+    ln -sf /usr/bin/python3 /usr/bin/python
+
+# Security: Create non-root user
+RUN groupadd --gid 1000 mpcuser && \
+    useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash mpcuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first for better layer caching
+COPY pyproject.toml ./
+COPY README.md ./
+
+# Upgrade pip and install base Python dependencies
+RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install PyTorch with CUDA support first
+RUN pip install --no-cache-dir \
+    torch==2.3.0+cu121 \
+    torchvision==0.18.0+cu121 \
+    torchaudio==2.3.0+cu121 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# Install project dependencies
+RUN pip install --no-cache-dir -e ".[gpu,dev]"
+
+# Development stage
+FROM base as development
+
+# Copy CUDA kernel source
+COPY --chown=mpcuser:mpcuser kernels/ ./kernels/
+
+# Install additional development tools
+RUN pip install --no-cache-dir \
+    jupyter \
+    jupyterlab \
+    ipdb \
+    nvitop \
+    gpustat
+
+# Copy source code
+COPY --chown=mpcuser:mpcuser . .
+
+# Build CUDA kernels
+RUN cd kernels/cuda && \
+    make clean && \
+    make all && \
+    cd ../..
+
+# Switch to non-root user
+USER mpcuser
+
+# Install in development mode
+RUN pip install --user --no-cache-dir -e ".[gpu,dev,benchmark]"
+
+# Expose ports for development
+EXPOSE 8888 8000
+
+# Default command for development
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
+
+# Production stage
+FROM base as production
+
+# Copy only necessary files
+COPY --chown=mpcuser:mpcuser src/ ./src/
+COPY --chown=mpcuser:mpcuser kernels/ ./kernels/
+COPY --chown=mpcuser:mpcuser pyproject.toml README.md ./
+
+# Build CUDA kernels
+RUN cd kernels/cuda && \
+    make clean && \
+    make all && \
+    cd ../..
+
+# Install package in production mode
+RUN pip install --no-cache-dir .
+
+# Switch to non-root user
+USER mpcuser
+
+# Verify GPU availability
+RUN python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')" && \
+    python -c "import torch; print(f'CUDA devices: {torch.cuda.device_count()}')" && \
+    nvidia-smi
+
+# Health check with GPU verification
+HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=3 \
+    CMD python -c "import secure_mpc_transformer; import torch; assert torch.cuda.is_available(); print('OK')" || exit 1
+
+# Expose application port
+EXPOSE 8080
+
+# Production entrypoint
+ENTRYPOINT ["python", "-m", "secure_mpc_transformer"]
+CMD ["--help"]

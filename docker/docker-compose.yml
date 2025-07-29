@@ -1,0 +1,231 @@
+# Docker Compose configuration for Secure MPC Transformer development and testing
+version: '3.8'
+
+services:
+  # Development environment
+  dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+      args:
+        GIT_USER_NAME: "${GIT_USER_NAME:-Developer}"
+        GIT_USER_EMAIL: "${GIT_USER_EMAIL:-developer@example.com}"
+    container_name: mpc-transformer-dev
+    volumes:
+      - ../:/workspace
+      - jupyter-data:/home/developer/.jupyter
+      - pip-cache:/home/developer/.cache/pip
+    ports:
+      - "8888:8888"  # Jupyter Lab
+      - "8000:8000"  # Development server
+      - "5000:5000"  # Flask/FastAPI
+    environment:
+      - PYTHONPATH=/workspace/src
+      - MPC_DEBUG=1
+    stdin_open: true
+    tty: true
+    networks:
+      - mpc-network
+
+  # CPU-only production environment
+  app-cpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.cpu
+      target: production
+    container_name: mpc-transformer-cpu
+    ports:
+      - "8080:8080"
+    environment:
+      - PYTHONPATH=/app/src
+      - MPC_PROTOCOL=semi_honest_3pc
+      - MPC_PARTY_ID=0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import secure_mpc_transformer; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - mpc-network
+
+  # GPU-enabled production environment
+  app-gpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gpu
+      target: production
+    container_name: mpc-transformer-gpu
+    ports:
+      - "8081:8080"
+    environment:
+      - PYTHONPATH=/app/src
+      - MPC_PROTOCOL=aby3
+      - MPC_PARTY_ID=0
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import secure_mpc_transformer; import torch; assert torch.cuda.is_available(); print('OK')"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - mpc-network
+
+  # Multi-party computation demo setup
+  mpc-party-0:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.cpu
+      target: production
+    container_name: mpc-party-0
+    environment:
+      - MPC_PARTY_ID=0
+      - MPC_NUM_PARTIES=3
+      - MPC_PROTOCOL=aby3
+      - MPC_PORT=50051
+      - MPC_PEERS=mpc-party-1:50051,mpc-party-2:50051
+    ports:
+      - "50051:50051"
+    networks:
+      - mpc-network
+    depends_on:
+      - redis
+
+  mpc-party-1:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.cpu
+      target: production
+    container_name: mpc-party-1
+    environment:
+      - MPC_PARTY_ID=1
+      - MPC_NUM_PARTIES=3
+      - MPC_PROTOCOL=aby3
+      - MPC_PORT=50051
+      - MPC_PEERS=mpc-party-0:50051,mpc-party-2:50051
+    ports:
+      - "50052:50051"
+    networks:
+      - mpc-network
+    depends_on:
+      - redis
+
+  mpc-party-2:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.cpu
+      target: production
+    container_name: mpc-party-2
+    environment:
+      - MPC_PARTY_ID=2
+      - MPC_NUM_PARTIES=3
+      - MPC_PROTOCOL=aby3
+      - MPC_PORT=50051
+      - MPC_PEERS=mpc-party-0:50051,mpc-party-1:50051
+    ports:
+      - "50053:50051"
+    networks:
+      - mpc-network
+    depends_on:
+      - redis
+
+  # Redis for secret sharing coordination
+  redis:
+    image: redis:7.2-alpine
+    container_name: mpc-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-mpc_secure_password}
+    networks:
+      - mpc-network
+    restart: unless-stopped
+
+  # Monitoring and observability
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mpc-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - mpc-network
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mpc-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/:/etc/grafana/provisioning/
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    networks:
+      - mpc-network
+    profiles:
+      - monitoring
+
+  # Testing environment
+  test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    container_name: mpc-transformer-test
+    volumes:
+      - ../:/workspace
+      - pip-cache:/home/developer/.cache/pip
+    environment:
+      - PYTHONPATH=/workspace/src
+      - PYTEST_CURRENT_TEST=1
+    command: >
+      bash -c "
+        cd /workspace &&
+        python -m pytest tests/ --cov=secure_mpc_transformer --cov-report=html --cov-report=term-missing
+      "
+    networks:
+      - mpc-network
+    profiles:
+      - test
+
+# Network configuration
+networks:
+  mpc-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Volume configuration
+volumes:
+  jupyter-data:
+    driver: local
+  pip-cache:
+    driver: local
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
