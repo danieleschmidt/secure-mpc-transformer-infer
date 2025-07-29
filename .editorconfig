@@ -1,27 +1,49 @@
+# EditorConfig for secure MPC transformer project
+# https://editorconfig.org/
+
 root = true
 
 [*]
 charset = utf-8
 end_of_line = lf
 indent_style = space
-indent_size = 4
+indent_size = 2
 insert_final_newline = true
 trim_trailing_whitespace = true
 
 [*.{py,pyx}]
 indent_size = 4
+max_line_length = 88
 
 [*.{yml,yaml}]
 indent_size = 2
 
-[*.{json,js,ts}]
+[*.{json,js,ts,tsx}]
 indent_size = 2
 
 [*.{md,rst}]
 trim_trailing_whitespace = false
+max_line_length = 100
+
+[*.toml]
+indent_size = 2
+
+[*.{sh,bash}]
+indent_size = 2
 
 [Makefile]
 indent_style = tab
+indent_size = 4
 
-[*.{cu,cuh}]
+[*.{cu,cuh,hpp,cpp}]
 indent_size = 2
+max_line_length = 100
+
+[docker/**]
+indent_size = 2
+
+[*.dockerfile]
+indent_size = 2
+
+[benchmarks/**]
+indent_size = 4

@@ -1,0 +1,177 @@
+# Alert rules for MPC transformer monitoring
+
+groups:
+  - name: mpc_performance
+    rules:
+      # High inference latency
+      - alert: HighInferenceLatency
+        expr: mpc_inference_duration_seconds > 300
+        for: 2m
+        labels:
+          severity: warning
+          component: inference
+        annotations:
+          summary: "High MPC inference latency detected"
+          description: "MPC inference is taking {{ $value }} seconds, which exceeds the 5-minute threshold"
+
+      # GPU memory usage
+      - alert: HighGPUMemoryUsage
+        expr: gpu_memory_used_bytes / gpu_memory_total_bytes > 0.9
+        for: 1m
+        labels:
+          severity: critical
+          component: gpu
+        annotations:
+          summary: "GPU memory usage is critically high"
+          description: "GPU memory usage is {{ $value | humanizePercentage }} on device {{ $labels.device }}"
+
+      # Protocol communication failures
+      - alert: MPCCommunicationFailures
+        expr: rate(mpc_communication_errors_total[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: warning
+          component: protocol
+        annotations:
+          summary: "High rate of MPC communication failures"
+          description: "MPC communication error rate is {{ $value }} errors/second"
+
+  - name: mpc_security
+    rules:
+      # Malicious behavior detection
+      - alert: MaliciousBehaviorDetected
+        expr: mpc_malicious_behavior_detected_total > 0
+        for: 0s
+        labels:
+          severity: critical
+          component: security
+        annotations:
+          summary: "Malicious behavior detected in MPC protocol"
+          description: "{{ $value }} instances of malicious behavior detected from party {{ $labels.party_id }}"
+
+      # Secret sharing integrity failures
+      - alert: SecretSharingIntegrityFailure
+        expr: rate(mpc_integrity_check_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: security
+        annotations:
+          summary: "Secret sharing integrity check failures"
+          description: "{{ $value }} integrity check failures per second in protocol {{ $labels.protocol }}"
+
+      # Unauthorized access attempts
+      - alert: UnauthorizedAccess
+        expr: rate(mpc_unauthorized_access_attempts_total[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "Unauthorized access attempts detected"
+          description: "{{ $value }} unauthorized access attempts per second"
+
+  - name: mpc_system
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # Disk space running low
+      - alert: LowDiskSpace
+        expr: (1 - node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Disk space running low"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }}:{{ $labels.mountpoint }}"
+
+  - name: mpc_application
+    rules:
+      # Application down
+      - alert: MPCApplicationDown
+        expr: up{job="mpc-transformer"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "MPC application is down"
+          description: "MPC transformer application on {{ $labels.instance }} has been down for more than 1 minute"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(mpc_requests_total{status!="200"}[5m]) / rate(mpc_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      # Protocol timeout increases
+      - alert: ProtocolTimeouts
+        expr: rate(mpc_protocol_timeouts_total[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+          component: protocol
+        annotations:
+          summary: "Increased protocol timeouts"
+          description: "Protocol timeout rate is {{ $value }} per second for protocol {{ $labels.protocol }}"
+
+  - name: mpc_performance_degradation
+    rules:
+      # Throughput degradation
+      - alert: ThroughputDegradation
+        expr: rate(mpc_processed_samples_total[5m]) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "Throughput degradation detected"
+          description: "Processing rate has dropped to {{ $value }} samples/second"
+
+      # Queue buildup
+      - alert: RequestQueueBuildup
+        expr: mpc_request_queue_size > 100
+        for: 2m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "Request queue building up"
+          description: "Request queue has {{ $value }} pending requests"
+
+      # CUDA kernel failures
+      - alert: CUDAKernelFailures
+        expr: rate(mpc_cuda_kernel_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: gpu
+        annotations:
+          summary: "CUDA kernel failures detected"
+          description: "{{ $value }} CUDA kernel failures per second on {{ $labels.device }}"
