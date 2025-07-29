@@ -1,0 +1,86 @@
+# Multi-stage CPU-only Docker image for Secure MPC Transformer
+# Optimized for security research and defensive applications
+
+FROM python:3.10-slim as base
+
+# Metadata
+LABEL org.opencontainers.image.title="Secure MPC Transformer (CPU)"
+LABEL org.opencontainers.image.description="CPU-only container for secure multi-party computation transformer inference"
+LABEL org.opencontainers.image.source="https://github.com/yourusername/secure-mpc-transformer"
+LABEL org.opencontainers.image.licenses="MIT"
+
+# Security: Create non-root user
+RUN groupadd --gid 1000 mpcuser && \
+    useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash mpcuser
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    pkg-config \
+    libssl-dev \
+    libffi-dev \
+    libprotobuf-dev \
+    protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first for better layer caching
+COPY pyproject.toml ./
+COPY README.md ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -e ".[dev]"
+
+# Development stage
+FROM base as development
+
+# Install additional development tools
+RUN pip install --no-cache-dir \
+    jupyter \
+    jupyterlab \
+    ipdb \
+    pre-commit
+
+# Copy source code
+COPY --chown=mpcuser:mpcuser . .
+
+# Switch to non-root user
+USER mpcuser
+
+# Install in development mode
+RUN pip install --user --no-cache-dir -e ".[dev,benchmark]"
+
+# Expose ports for development
+EXPOSE 8888 8000
+
+# Default command for development
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
+
+# Production stage
+FROM base as production
+
+# Copy only necessary files
+COPY --chown=mpcuser:mpcuser src/ ./src/
+COPY --chown=mpcuser:mpcuser pyproject.toml README.md ./
+
+# Install package in production mode
+RUN pip install --no-cache-dir .
+
+# Switch to non-root user
+USER mpcuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import secure_mpc_transformer; print('OK')" || exit 1
+
+# Expose application port
+EXPOSE 8080
+
+# Production entrypoint
+ENTRYPOINT ["python", "-m", "secure_mpc_transformer"]
+CMD ["--help"]

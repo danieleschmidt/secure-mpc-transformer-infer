@@ -1,0 +1,226 @@
+# GitLeaks configuration for Secure MPC Transformer
+# Detects secrets and sensitive information in Git repositories
+
+title = "Secure MPC Transformer GitLeaks Configuration"
+
+[extend]
+# Use default GitLeaks rules as base
+useDefault = true
+
+# Custom rules for MPC-specific secrets
+[[rules]]
+id = "mpc-secret-share"
+description = "MPC secret share detected"
+regex = '''(?i)(secret_share|share_data|mpc_share)['"\\s]*[:=]['"\\s]*[a-fA-F0-9]{32,}'''
+tags = ["mpc", "secret", "cryptography"]
+
+[[rules]]
+id = "private-key-pem"
+description = "Private key in PEM format"
+regex = '''-----BEGIN [A-Z]+ PRIVATE KEY-----'''
+tags = ["key", "private", "pem"]
+
+[[rules]]
+id = "rsa-private-key"
+description = "RSA private key detected"
+regex = '''-----BEGIN RSA PRIVATE KEY-----'''
+tags = ["key", "private", "rsa"]
+
+[[rules]]
+id = "dsa-private-key"
+description = "DSA private key detected"
+regex = '''-----BEGIN DSA PRIVATE KEY-----'''
+tags = ["key", "private", "dsa"]
+
+[[rules]]
+id = "ec-private-key"
+description = "EC private key detected"
+regex = '''-----BEGIN EC PRIVATE KEY-----'''
+tags = ["key", "private", "ec"]
+
+[[rules]]
+id = "openssh-private-key"
+description = "OpenSSH private key detected"
+regex = '''-----BEGIN OPENSSH PRIVATE KEY-----'''
+tags = ["key", "private", "openssh"]
+
+[[rules]]
+id = "crypto-seed"
+description = "Cryptographic seed detected"
+regex = '''(?i)(crypto_seed|random_seed|entropy_seed)['"\\s]*[:=]['"\\s]*[a-fA-F0-9]{16,}'''
+tags = ["crypto", "seed", "entropy"]
+
+[[rules]]
+id = "api-key-pattern"
+description = "API key pattern detected"
+regex = '''(?i)(api[_-]?key|apikey)['"\\s]*[:=]['"\\s]*[a-zA-Z0-9]{20,}'''
+tags = ["api", "key", "authentication"]
+
+[[rules]]
+id = "jwt-token"
+description = "JWT token detected"
+regex = '''eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*'''
+tags = ["jwt", "token", "authentication"]
+
+[[rules]]
+id = "password-in-url"
+description = "Password in URL detected"
+regex = '''[a-zA-Z][a-zA-Z0-9+.-]*://[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+'''
+tags = ["password", "url", "authentication"]
+
+[[rules]]
+id = "bearer-token"
+description = "Bearer token detected"
+regex = '''(?i)bearer['"\\s]+[a-zA-Z0-9_-]{20,}'''
+tags = ["bearer", "token", "authentication"]
+
+[[rules]]
+id = "basic-auth"
+description = "Basic authentication credentials"
+regex = '''(?i)basic['"\\s]+[a-zA-Z0-9+/=]{20,}'''
+tags = ["basic", "auth", "authentication"]
+
+[[rules]]
+id = "database-connection"
+description = "Database connection string with credentials"
+regex = '''(?i)(mysql|postgresql|mongodb|redis)://[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+@'''
+tags = ["database", "connection", "credentials"]
+
+[[rules]]
+id = "slack-webhook"
+description = "Slack webhook URL"
+regex = '''https://hooks\.slack\.com/services/[A-Z0-9]{9}/[A-Z0-9]{9}/[a-zA-Z0-9]{24}'''
+tags = ["slack", "webhook", "integration"]
+
+[[rules]]
+id = "github-token"
+description = "GitHub personal access token"
+regex = '''ghp_[a-zA-Z0-9]{36}'''
+tags = ["github", "token", "pat"]
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS access key ID"
+regex = '''AKIA[0-9A-Z]{16}'''
+tags = ["aws", "access", "key"]
+
+[[rules]]
+id = "aws-secret-key"
+description = "AWS secret access key"
+regex = '''(?i)aws[_-]?secret[_-]?access[_-]?key['"\\s]*[:=]['"\\s]*[a-zA-Z0-9/+=]{40}'''
+tags = ["aws", "secret", "key"]
+
+[[rules]]
+id = "gcp-service-account"
+description = "GCP service account key"
+regex = '''(?i)service[_-]?account['"\\s]*[:=]['"\\s]*\{[^}]*private_key[^}]*\}'''
+tags = ["gcp", "service", "account"]
+
+[[rules]]
+id = "azure-client-secret"
+description = "Azure client secret"
+regex = '''(?i)client[_-]?secret['"\\s]*[:=]['"\\s]*[a-zA-Z0-9~_-]{32,}'''
+tags = ["azure", "client", "secret"]
+
+[[rules]]
+id = "docker-config"
+description = "Docker configuration with auth"
+regex = '''(?i)\{[^}]*"auth"[^}]*"[a-zA-Z0-9+/=]+"[^}]*\}'''
+tags = ["docker", "auth", "config"]
+
+[[rules]]
+id = "ssh-rsa-key"
+description = "SSH RSA public key (check for private key exposure)"
+regex = '''ssh-rsa AAAA[0-9A-Za-z+/]+[=]{0,3}'''
+tags = ["ssh", "rsa", "public"]
+
+[[rules]]
+id = "x509-certificate"
+description = "X.509 certificate"
+regex = '''-----BEGIN CERTIFICATE-----'''
+tags = ["x509", "certificate", "crypto"]
+
+# Allowlist configuration
+[allowlist]
+description = "Allowlist for test files and documentation"
+
+# Files to ignore
+files = [
+    '''\.md$''',                    # Markdown documentation
+    '''\.rst$''',                   # reStructuredText documentation
+    '''\.txt$''',                   # Text files
+    '''tests/.*test.*\.py$''',      # Test files
+    '''tests/fixtures/.*''',        # Test fixtures
+    '''examples/.*\.py$''',         # Example code
+    '''docs/.*\.py$''',             # Documentation code
+    '''benchmarks/.*\.py$''',       # Benchmark scripts
+    '''\.github/.*\.ya?ml$''',      # GitHub Actions workflows
+    '''\.pre-commit-config\.yaml$''', # Pre-commit config
+    '''pyproject\.toml$''',         # Project configuration
+    '''setup\.py$''',               # Setup script
+    '''setup\.cfg$''',              # Setup configuration
+]
+
+# Paths to ignore completely
+paths = [
+    '''node_modules/''',
+    '''.git/''',
+    '''.venv/''',
+    '''venv/''',
+    '''build/''',
+    '''dist/''',
+    '''.pytest_cache/''',
+    '''__pycache__/''',
+    '''.mypy_cache/''',
+    '''.coverage''',
+    '''htmlcov/''',
+    '''.tox/''',
+    '''.eggs/''',
+]
+
+# Regular expressions for allowed patterns
+regexes = [
+    '''example[_-]?key''',          # Example keys in documentation
+    '''dummy[_-]?secret''',         # Dummy secrets in examples
+    '''test[_-]?password''',        # Test passwords
+    '''fake[_-]?token''',           # Fake tokens in tests
+    '''placeholder[_-]?api''',      # Placeholder API keys
+    '''YOUR[_-]?.*[_-]?KEY''',      # Template placeholders
+    '''INSERT[_-]?.*[_-]?HERE''',   # Template placeholders
+    '''REPLACE[_-]?.*[_-]?WITH''',  # Template placeholders
+]
+
+# Commits to ignore (by SHA)
+commits = []
+
+# Global allowlist for specific secret patterns
+[[allowlist.rules]]
+description = "Allow example secrets in documentation"
+regex = '''(?i)(example|dummy|fake|test|placeholder)[_-]?(key|secret|token|password)'''
+tags = ["example", "documentation"]
+
+[[allowlist.rules]]
+description = "Allow template placeholders"
+regex = '''(?i)(your[_-]?|insert[_-]?|replace[_-]?|todo[_-]?)(key|secret|token|password|here|with)'''
+tags = ["template", "placeholder"]
+
+[[allowlist.rules]]
+description = "Allow base64 encoded test data"
+regex = '''(?i)test[_-]?data['"\\s]*[:=]['"\\s]*[a-zA-Z0-9+/=]+'''
+tags = ["test", "data"]
+
+# Entropy settings
+[allowlist.stopwords]
+# Common words to ignore in entropy analysis
+stopwords = [
+    "example",
+    "dummy", 
+    "fake",
+    "test",
+    "placeholder",
+    "sample",
+    "demo",
+    "mock",
+    "stub",
+    "template"
+]
