@@ -237,3 +237,27 @@ benchmarks/results/
 protocol_data/
 shares/
 temp_shares/
+
+# Docker secrets and runtime data
+.dockerignore.secrets
+docker/data/
+docker/logs/
+
+# Kubernetes configs with secrets
+*.kubeconfig
+k8s-secrets/
+
+# Terraform state and vars
+terraform.tfstate*
+*.tfvars
+.terraform/
+
+# Monitoring data
+grafana/data/
+prometheus/data/
+monitoring/logs/
+
+# Deployment artifacts
+deployment/artifacts/
+deployment/keys/
+deployment/configs/
