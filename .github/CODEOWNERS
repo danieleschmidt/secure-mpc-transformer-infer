@@ -1,0 +1,37 @@
+# Global ownership
+* @danieleschmidt
+
+# Core MPC protocols - require cryptography expert review
+/src/secure_mpc_transformer/protocols/ @danieleschmidt @crypto-team
+/src/secure_mpc_transformer/crypto/ @danieleschmidt @crypto-team
+
+# GPU kernels - require GPU optimization expert review  
+/kernels/ @danieleschmidt @gpu-team
+/src/secure_mpc_transformer/gpu/ @danieleschmidt @gpu-team
+
+# Security-critical files - require security team review
+/docs/security/ @danieleschmidt @security-team
+SECURITY.md @danieleschmidt @security-team
+/.secrets.baseline @danieleschmidt @security-team
+/.bandit @danieleschmidt @security-team
+/.gitleaks.toml @danieleschmidt @security-team
+
+# Infrastructure and deployment
+/docker/ @danieleschmidt @devops-team
+/monitoring/ @danieleschmidt @devops-team
+/docs/deployment/ @danieleschmidt @devops-team
+kubernetes-manifests.yaml @danieleschmidt @devops-team
+
+# Documentation - allow broader contribution
+/docs/ @danieleschmidt
+README.md @danieleschmidt
+CONTRIBUTING.md @danieleschmidt
+
+# CI/CD and automation
+/.github/ @danieleschmidt @devops-team
+/.pre-commit-config.yaml @danieleschmidt @devops-team
+/pyproject.toml @danieleschmidt
+
+# Benchmarks and testing
+/benchmarks/ @danieleschmidt @performance-team
+/tests/ @danieleschmidt
