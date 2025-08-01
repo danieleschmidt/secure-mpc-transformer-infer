@@ -1,0 +1,227 @@
+# Terragon Autonomous SDLC Configuration
+# Value Discovery and Prioritization System
+
+version: "1.0"
+repository: "secure-mpc-transformer"
+maturity_level: "maturing"
+
+# Scoring weights adapted for MATURING repositories (50-75% SDLC maturity)
+scoring:
+  weights:
+    wsjf: 0.6          # Higher weight on delivery value
+    ice: 0.1           # Lower confidence in early estimates  
+    technicalDebt: 0.2 # Moderate debt focus for mature systems
+    security: 0.1      # Baseline security weight
+    
+  # Scoring thresholds and boosts
+  thresholds:
+    minScore: 10               # Minimum composite score to execute
+    maxRisk: 0.8              # Maximum acceptable risk level
+    securityBoost: 2.0        # 2x boost for security vulnerabilities
+    complianceBoost: 1.8      # 1.8x boost for compliance issues
+    performanceBoost: 1.5     # 1.5x boost for performance improvements
+    documentationPenalty: 0.6 # 0.6x penalty for doc-only changes
+
+# Value discovery sources - prioritized for research/cryptography repository
+discovery:
+  sources:
+    # Code analysis sources (highest priority)
+    - name: "gitHistory"
+      enabled: true
+      priority: "high"
+      patterns:
+        - "TODO"
+        - "FIXME" 
+        - "HACK"
+        - "XXX"
+        - "DEPRECATED"
+        - "quick fix"
+        - "temporary"
+        - "workaround"
+    
+    # Static analysis integration
+    - name: "staticAnalysis"
+      enabled: true
+      priority: "high"
+      tools:
+        - "ruff"           # Python linting (already configured)
+        - "mypy"           # Type checking (already configured)
+        - "bandit"         # Security scanning (referenced in Makefile)
+        - "safety"         # Dependency vulnerability scanning
+        - "semgrep"        # Pattern-based security analysis
+    
+    # Security-focused discovery (critical for cryptography projects)
+    - name: "securityScanning"
+      enabled: true
+      priority: "critical"
+      tools:
+        - "snyk"           # Comprehensive vulnerability scanning
+        - "trivy"          # Container security scanning
+        - "dependabot"     # Automated dependency updates
+        - "codeql"         # Semantic code analysis
+
+    # Issue tracking integration
+    - name: "issueTrackers"
+      enabled: true
+      priority: "medium"
+      sources:
+        - "github_issues"
+        - "github_discussions"
+        - "security_advisories"
+    
+    # Performance monitoring (important for GPU-accelerated MPC)
+    - name: "performanceMonitoring"  
+      enabled: true
+      priority: "medium"
+      metrics:
+        - "inference_latency"
+        - "gpu_utilization"
+        - "memory_usage"
+        - "computation_time"
+        - "communication_overhead"
+    
+    # Documentation and compliance
+    - name: "complianceTracking"
+      enabled: true
+      priority: "low"
+      frameworks:
+        - "ndss_requirements"    # Academic publication standards
+        - "cryptography_standards"
+        - "research_reproducibility"
+
+# Execution configuration
+execution:
+  # Conservative approach for research code
+  maxConcurrentTasks: 1
+  
+  # Quality gates before execution
+  testRequirements:
+    minCoverage: 80                    # Maintain high test coverage
+    performanceRegressionThreshold: 5  # Max 5% performance regression
+    securityScanPassing: true          # All security scans must pass
+    
+  # Automatic rollback triggers
+  rollbackTriggers:
+    - "testFailure"
+    - "buildFailure" 
+    - "securityViolation"
+    - "performanceRegression"
+    - "dependencyConflict"
+    
+  # Branch naming convention
+  branchNaming: "auto-value/${item.id}-${item.slug}"
+  
+  # PR requirements
+  pullRequestRequirements:
+    assignCodeOwners: true
+    requireReviews: true
+    includeRollbackPlan: true
+    includeValueMetrics: true
+
+# Learning and adaptation settings
+learning:
+  # Track prediction accuracy to improve scoring
+  trackAccuracy: true
+  
+  # Update models based on outcomes
+  adaptiveWeights: true
+  
+  # Store execution history for analysis
+  historyRetention: "6 months"
+  
+  # Learning rate for weight adjustments
+  learningRate: 0.1
+
+# Notification and reporting
+notifications:
+  # Slack integration for value delivery reports
+  slack:
+    enabled: false
+    webhook: ""
+    channels:
+      - "#terragon-value-delivery"
+      - "#security-updates"
+  
+  # Email notifications for critical findings
+  email:
+    enabled: false
+    recipients: []
+    
+  # GitHub integration
+  github:
+    enabled: true
+    createIssues: true
+    addLabels: true
+    assignReviewers: true
+
+# Repository-specific configurations
+repository_config:
+  # Language-specific settings
+  language: "python"
+  framework: "pytorch"
+  domain: "cryptography"
+  
+  # Critical paths for this repository
+  criticalPaths:
+    - "src/secure_mpc_transformer/"     # Core implementation
+    - "tests/"                          # Test suite
+    - "benchmarks/"                     # Performance testing
+    - "docker/"                         # Deployment configurations
+    - "docs/security/"                  # Security documentation
+    
+  # High-value file patterns
+  highValuePatterns:
+    - "**/*security*"                   # Security-related files
+    - "**/*crypto*"                     # Cryptography implementations  
+    - "**/Dockerfile*"                  # Container configurations
+    - "**/*test*"                       # Test files
+    - "**/benchmark*"                   # Performance tests
+    
+  # Files to avoid modifying (research integrity)
+  protectedPaths:
+    - "LICENSE"                         # Legal protection
+    - "CHANGELOG.md"                    # Version history
+    - "benchmarks/results/"             # Published results
+    - "docs/security/threat-modeling.md" # Security analysis
+
+# Value categories and weights for this repository
+valueCategories:
+  security:
+    weight: 0.35    # Highest priority for cryptography research
+    subcategories:
+      - "vulnerability_fixes"
+      - "dependency_updates"
+      - "secure_coding_improvements"
+      - "compliance_enhancements"
+      
+  performance:
+    weight: 0.25    # Critical for MPC/GPU acceleration
+    subcategories:
+      - "gpu_optimizations"
+      - "algorithm_improvements"
+      - "memory_optimizations"
+      - "benchmark_enhancements"
+      
+  reliability:
+    weight: 0.20    # Important for research reproducibility
+    subcategories:
+      - "test_coverage_improvements"
+      - "error_handling_enhancements"
+      - "monitoring_improvements"
+      - "stability_fixes"
+      
+  maintainability:
+    weight: 0.15    # Code quality and technical debt
+    subcategories:
+      - "code_refactoring"
+      - "documentation_updates"
+      - "dependency_management"
+      - "tooling_improvements"
+      
+  usability:
+    weight: 0.05    # Lower priority for research code
+    subcategories:
+      - "api_improvements"
+      - "error_messages"
+      - "example_updates"
+      - "interface_simplification"
