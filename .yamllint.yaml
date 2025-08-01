@@ -1,0 +1,55 @@
+# YAML linting configuration for Secure MPC Transformer project
+# Used by yamllint pre-commit hook and CI/CD workflows
+
+extends: default
+
+rules:
+  # Line length to match other tools
+  line-length:
+    max: 88
+    level: warning
+    
+  # Indentation consistency
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+    
+  # Comments formatting
+  comments:
+    min-spaces-from-content: 1
+    
+  # Document markers
+  document-start:
+    present: false
+    
+  # Brackets and braces
+  brackets:
+    max-spaces-inside: 1
+    
+  braces:
+    max-spaces-inside: 1
+    
+  # Empty lines
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+    
+  # Truthy values (allow yes/no, on/off)
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    check-keys: false
+
+# Ignore patterns
+ignore: |
+  .git/
+  **/.git/
+  **/node_modules/
+  **/.venv/
+  **/__pycache__/
+  **/dist/
+  **/build/
+  **/.terraform/
+  monitoring/grafana/dashboards/*.json
+  .secrets.baseline
