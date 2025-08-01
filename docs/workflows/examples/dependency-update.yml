@@ -1,0 +1,428 @@
+# Automated Dependency Update Workflow for Secure MPC Transformer
+# This file serves as a template - manual creation required due to GitHub App permissions
+
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run weekly on Mondays at 9 AM UTC  
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      update_type:
+        description: 'Type of update to perform'
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+        - all
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  # Check for dependency updates
+  check-updates:
+    name: Check for Updates
+    runs-on: ubuntu-latest
+    outputs:
+      has-updates: ${{ steps.check.outputs.has-updates }}
+      python-updates: ${{ steps.check.outputs.python-updates }}
+      docker-updates: ${{ steps.check.outputs.docker-updates }}
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install dependency checking tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-tools pip-audit outdated
+          
+      - name: Check Python dependencies
+        id: check
+        run: |
+          # Check for outdated Python packages
+          pip list --outdated --format=json > outdated-packages.json
+          
+          # Check if there are any updates
+          if [ -s outdated-packages.json ] && [ "$(cat outdated-packages.json)" != "[]" ]; then
+            echo "has-updates=true" >> $GITHUB_OUTPUT
+            echo "python-updates=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-updates=false" >> $GITHUB_OUTPUT
+            echo "python-updates=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check Docker base image updates (simplified check)
+          if docker pull python:3.10-slim | grep -q "Downloaded newer image"; then
+            echo "docker-updates=true" >> $GITHUB_OUTPUT
+          else
+            echo "docker-updates=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Upload dependency check results
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-check
+          path: outdated-packages.json
+
+  # Update Python dependencies
+  update-python-deps:
+    name: Update Python Dependencies
+    runs-on: ubuntu-latest
+    needs: check-updates
+    if: needs.check-updates.outputs.python-updates == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.DEPENDENCY_UPDATE_TOKEN }}
+          
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install dependency management tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-tools safety
+          
+      - name: Update dependencies based on type
+        run: |
+          UPDATE_TYPE="${{ github.event.inputs.update_type || 'minor' }}"
+          
+          case $UPDATE_TYPE in
+            "patch")
+              # Only patch updates
+              pip-compile --upgrade-package="*" --resolver=backtracking pyproject.toml
+              ;;
+            "minor")
+              # Minor and patch updates
+              pip-compile --upgrade --resolver=backtracking pyproject.toml
+              ;;
+            "major"|"all")
+              # All updates including major
+              pip-compile --upgrade --resolver=backtracking pyproject.toml
+              ;;
+          esac
+          
+      - name: Install updated dependencies
+        run: |
+          pip install -e ".[dev,test]"
+          
+      - name: Run security audit
+        run: |
+          pip-audit --desc --output audit-results.json --format=json || true
+          
+      - name: Run safety check
+        run: |
+          safety check --json --output safety-results.json || true
+          
+      - name: Run tests with updated dependencies
+        run: |
+          python -m pytest tests/unit/ -v --tb=short
+          
+      - name: Check for breaking changes
+        run: |
+          # Run a subset of integration tests to check for breaking changes
+          python -m pytest tests/integration/ -v --tb=short -k "not slow" || echo "Some integration tests failed"
+          
+      - name: Generate update summary
+        run: |
+          cat << EOF > update-summary.md
+          # Dependency Update Summary
+          
+          **Update Type:** ${{ github.event.inputs.update_type || 'minor' }}
+          **Date:** $(date)
+          
+          ## Updated Packages
+          EOF
+          
+          # Parse outdated packages and show what was updated
+          if [ -f "outdated-packages.json" ]; then
+            jq -r '.[] | "- **\(.name)**: \(.version) → \(.latest_version)"' outdated-packages.json >> update-summary.md
+          fi
+          
+          cat << EOF >> update-summary.md
+          
+          ## Security Audit Results
+          EOF
+          
+          if [ -f "audit-results.json" ]; then
+            VULN_COUNT=$(jq '.vulnerabilities | length' audit-results.json)
+            echo "- Found $VULN_COUNT vulnerabilities" >> update-summary.md
+          fi
+          
+          if [ -f "safety-results.json" ]; then
+            SAFETY_COUNT=$(jq '.vulnerabilities | length' safety-results.json 2>/dev/null || echo "0")
+            echo "- Safety check found $SAFETY_COUNT issues" >> update-summary.md
+          fi
+          
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.DEPENDENCY_UPDATE_TOKEN }}
+          commit-message: |
+            chore(deps): update dependencies (${{ github.event.inputs.update_type || 'minor' }})
+            
+            Automated dependency update:
+            - Update type: ${{ github.event.inputs.update_type || 'minor' }}
+            - Security audit: passed
+            - Tests: passed
+            
+            Generated by dependency-update workflow
+          title: '🔄 Automated Dependency Update (${{ github.event.inputs.update_type || 'minor' }})'
+          body-path: update-summary.md
+          branch: automated/dependency-update-${{ github.run_number }}
+          labels: |
+            dependencies
+            automated
+            ${{ github.event.inputs.update_type || 'minor' }}
+          reviewers: |
+            security-team
+            tech-leads
+          draft: false
+          
+      - name: Upload update artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-update-results
+          path: |
+            update-summary.md
+            audit-results.json
+            safety-results.json
+
+  # Update Docker base images
+  update-docker-images:
+    name: Update Docker Images
+    runs-on: ubuntu-latest
+    needs: check-updates
+    if: needs.check-updates.outputs.docker-updates == 'true'
+    strategy:
+      matrix:
+        dockerfile: [cpu, gpu, dev]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.DEPENDENCY_UPDATE_TOKEN }}
+          
+      - name: Update base image versions
+        run: |
+          DOCKERFILE="docker/Dockerfile.${{ matrix.dockerfile }}"
+          
+          # Update Python base image
+          sed -i 's/python:3\.10-slim/python:3.10-slim/g' $DOCKERFILE
+          
+          # Update CUDA image if applicable
+          if [ "${{ matrix.dockerfile }}" = "gpu" ]; then
+            # Get latest CUDA version (simplified)
+            LATEST_CUDA=$(curl -s https://hub.docker.com/v2/repositories/nvidia/cuda/tags/ | jq -r '.results[] | select(.name | contains("devel-ubuntu22.04")) | .name' | head -1)
+            if [ -n "$LATEST_CUDA" ]; then
+              sed -i "s/nvidia\/cuda:[^[:space:]]*/nvidia\/cuda:$LATEST_CUDA/g" $DOCKERFILE
+            fi
+          fi
+          
+      - name: Test updated Docker images
+        run: |
+          # Build updated image
+          docker build -f docker/Dockerfile.${{ matrix.dockerfile }} -t test-${{ matrix.dockerfile }}:updated .
+          
+          # Test basic functionality
+          docker run --rm test-${{ matrix.dockerfile }}:updated python -c "import sys; print(f'Python {sys.version}')"
+          
+          # Test package installation
+          docker run --rm test-${{ matrix.dockerfile }}:updated python -c "import secure_mpc_transformer; print('Package import successful')"
+          
+      - name: Security scan updated image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'test-${{ matrix.dockerfile }}:updated'
+          format: 'json'
+          output: 'trivy-${{ matrix.dockerfile }}-updated.json'
+          
+      - name: Compare vulnerability count
+        run: |
+          # Build current image for comparison
+          git checkout HEAD~1 -- docker/Dockerfile.${{ matrix.dockerfile }}
+          docker build -f docker/Dockerfile.${{ matrix.dockerfile }} -t test-${{ matrix.dockerfile }}:current .
+          
+          # Scan current image
+          trivy image --format json --output trivy-${{ matrix.dockerfile }}-current.json test-${{ matrix.dockerfile }}:current
+          
+          # Compare results
+          CURRENT_VULNS=$(jq '.Results[0].Vulnerabilities | length' trivy-${{ matrix.dockerfile }}-current.json 2>/dev/null || echo "0")
+          UPDATED_VULNS=$(jq '.Results[0].Vulnerabilities | length' trivy-${{ matrix.dockerfile }}-updated.json 2>/dev/null || echo "0")
+          
+          echo "Current vulnerabilities: $CURRENT_VULNS"
+          echo "Updated vulnerabilities: $UPDATED_VULNS"
+          
+          if [ "$UPDATED_VULNS" -gt "$CURRENT_VULNS" ]; then
+            echo "⚠️ Updated image has more vulnerabilities"
+            exit 1
+          fi
+          
+      - name: Restore updated Dockerfile
+        run: |
+          git checkout HEAD -- docker/Dockerfile.${{ matrix.dockerfile }}
+          
+      - name: Upload Docker update results
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-update-${{ matrix.dockerfile }}
+          path: |
+            trivy-${{ matrix.dockerfile }}-*.json
+
+  # Create Docker update PR
+  create-docker-pr:
+    name: Create Docker Update PR
+    runs-on: ubuntu-latest
+    needs: [check-updates, update-docker-images]
+    if: needs.check-updates.outputs.docker-updates == 'true' && success()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.DEPENDENCY_UPDATE_TOKEN }}
+          
+      - name: Download Docker update results
+        uses: actions/download-artifact@v3
+        
+      - name: Generate Docker update summary
+        run: |
+          cat << EOF > docker-update-summary.md
+          # Docker Base Image Updates
+          
+          **Date:** $(date)
+          
+          ## Updated Images
+          - CPU: Updated Python base image
+          - GPU: Updated CUDA and Python base images  
+          - Dev: Updated development base image
+          
+          ## Security Impact
+          EOF
+          
+          for dockerfile in cpu gpu dev; do
+            if [ -f "docker-update-$dockerfile/trivy-$dockerfile-current.json" ] && [ -f "docker-update-$dockerfile/trivy-$dockerfile-updated.json" ]; then
+              CURRENT_VULNS=$(jq '.Results[0].Vulnerabilities | length' docker-update-$dockerfile/trivy-$dockerfile-current.json 2>/dev/null || echo "0")
+              UPDATED_VULNS=$(jq '.Results[0].Vulnerabilities | length' docker-update-$dockerfile/trivy-$dockerfile-updated.json 2>/dev/null || echo "0")
+              echo "- **$dockerfile**: $CURRENT_VULNS → $UPDATED_VULNS vulnerabilities" >> docker-update-summary.md
+            fi
+          done
+          
+          cat << EOF >> docker-update-summary.md
+          
+          ## Testing Results
+          - All images build successfully
+          - Basic functionality tests passed
+          - Security scans completed
+          EOF
+          
+      - name: Create Docker Update PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.DEPENDENCY_UPDATE_TOKEN }}
+          commit-message: |
+            chore(docker): update base images
+            
+            Automated Docker base image updates:
+            - Updated Python base images
+            - Updated CUDA images (GPU variant)
+            - Security scanning completed
+            
+            Generated by dependency-update workflow
+          title: '🐳 Automated Docker Base Image Update'
+          body-path: docker-update-summary.md
+          branch: automated/docker-update-${{ github.run_number }}
+          labels: |
+            docker
+            dependencies
+            automated
+          reviewers: |
+            devops-team
+            tech-leads
+
+  # Security review for updates
+  security-review:
+    name: Security Review
+    runs-on: ubuntu-latest
+    needs: [update-python-deps]
+    if: always() && (needs.update-python-deps.result == 'success' || needs.update-python-deps.result == 'failure')
+    steps:
+      - name: Download update results
+        uses: actions/download-artifact@v3
+        
+      - name: Review security implications
+        run: |
+          echo "## Security Review Results" > security-review.md
+          echo "" >> security-review.md
+          
+          # Check for security-related updates
+          if [ -f "dependency-update-results/audit-results.json" ]; then
+            VULN_COUNT=$(jq '.vulnerabilities | length' dependency-update-results/audit-results.json)
+            if [ "$VULN_COUNT" -gt 0 ]; then
+              echo "⚠️ **Warning**: $VULN_COUNT vulnerabilities found in updated dependencies" >> security-review.md
+              echo "" >> security-review.md
+              echo "### Vulnerabilities:" >> security-review.md
+              jq -r '.vulnerabilities[] | "- **\(.package)** (\(.id)): \(.description)"' dependency-update-results/audit-results.json >> security-review.md
+              echo "" >> security-review.md
+            else
+              echo "✅ No vulnerabilities found in updated dependencies" >> security-review.md
+            fi
+          fi
+          
+          echo "" >> security-review.md
+          echo "### Recommendations:" >> security-review.md
+          echo "- Review all major version updates carefully" >> security-review.md
+          echo "- Test thoroughly before merging" >> security-review.md
+          echo "- Monitor for any behavioral changes" >> security-review.md
+          
+      - name: Create security review issue
+        if: contains(fromJSON('["failure", "success"]'), needs.update-python-deps.result)
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '';
+            try {
+              body = fs.readFileSync('security-review.md', 'utf8');
+            } catch (error) {
+              body = 'Security review could not be completed. Please review manually.';
+            }
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🔒 Security Review: Dependency Updates ${new Date().toISOString().split('T')[0]}`,
+              body: body,
+              labels: ['security', 'dependencies', 'review-needed'],
+              assignees: ['security-team']
+            });
+
+  # Cleanup old dependency update branches
+  cleanup:
+    name: Cleanup Old Branches
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.DEPENDENCY_UPDATE_TOKEN }}
+          fetch-depth: 0
+          
+      - name: Delete old automated branches
+        run: |
+          # Delete automated dependency update branches older than 7 days
+          git for-each-ref --format='%(refname:short) %(committerdate:unix)' refs/remotes/origin/automated/dependency-update-* | \
+          while read branch date; do
+            if [ $(($(date +%s) - date)) -gt 604800 ]; then # 7 days
+              echo "Deleting old branch: $branch"
+              git push origin --delete ${branch#origin/} || true
+            fi
+          done

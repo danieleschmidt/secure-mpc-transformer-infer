@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+      args:
+        PYTHON_VERSION: "3.10"
+        CUDA_VERSION: "12.1"
+        UBUNTU_VERSION: "22.04"
+    
+    volumes:
+      - ..:/workspace:cached
+      - ~/.ssh:/home/vscode/.ssh:ro
+      - ~/.gitconfig:/home/vscode/.gitconfig:ro
+      - /var/run/docker.sock:/var/run/docker-host.sock
+      
+    environment:
+      - PYTHONPATH=/workspace/src
+      - CUDA_VISIBLE_DEVICES=all
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      
+    working_dir: /workspace
+    
+    # GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    # Networking
+    ports:
+      - "8080:8080"   # Main API
+      - "8888:8888"   # Jupyter
+      - "9090:9090"   # Prometheus
+      - "3000:3000"   # Grafana
+      - "50051:50051" # gRPC
+      - "6006:6006"   # TensorBoard
+      
+    # Override default command to keep container running
+    command: sleep infinity
+    
+    # Security context
+    user: vscode
+    
+    # Resource limits
+    shm_size: 2gb
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack:
+        soft: 67108864
+        hard: 67108864
+
+  # Supporting services for development
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9091:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+
+volumes:
+  redis_data:
+  prometheus_data:
+  grafana_data:

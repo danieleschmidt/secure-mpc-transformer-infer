@@ -1,0 +1,171 @@
+# .dockerignore for Secure MPC Transformer project
+# Exclude unnecessary files from Docker build context
+
+# Version control
+.git
+.gitignore
+.gitattributes
+.github/
+
+# Documentation
+*.md
+docs/
+*.txt
+!requirements*.txt
+!README.md
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Development and testing
+tests/
+benchmarks/
+.pre-commit-config.yaml
+.secrets.baseline
+.bandit
+.semgrep.yml
+
+# Build and deployment
+Makefile
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Monitoring and logs
+monitoring/
+logs/
+*.log
+
+# Data and models (exclude large files)
+data/
+models/
+*.h5
+*.pkl
+*.pth
+*.bin
+*.safetensors
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Security and secrets
+.secrets
+*.key
+*.pem
+*.crt
+*.p12
+.env.local
+.env.production
+
+# Performance profiling
+*.prof
+profile.stats
+*.stats
+
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
+# IDE specific
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+
+# Keep essential files
+!src/
+!pyproject.toml
+!setup.py
+!requirements.txt
+!LICENSE
+!CHANGELOG.md

@@ -1,0 +1,415 @@
+# Security Scanning Workflow for Secure MPC Transformer
+# This file serves as a template - manual creation required due to GitHub App permissions
+
+name: Security Scan
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'docker/**'
+      - 'requirements*.txt'
+      - 'pyproject.toml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'docker/**'
+      - 'requirements*.txt'
+      - 'pyproject.toml'
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  # Static Application Security Testing (SAST)
+  sast:
+    name: Static Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit[toml] safety semgrep
+          
+      - name: Run Bandit security scan
+        run: |
+          bandit -r src/ -f json -o bandit-report.json
+          bandit -r src/ -f txt -o bandit-report.txt
+          
+      - name: Run Safety dependency scan
+        run: |
+          safety check --json --output safety-report.json
+          safety check --output safety-report.txt
+          
+      - name: Run Semgrep security scan
+        run: |
+          semgrep --config=auto --json --output=semgrep-report.json src/
+          semgrep --config=auto --output=semgrep-report.txt src/
+          
+      - name: Upload SAST results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: sast-reports
+          path: |
+            bandit-report.*
+            safety-report.*
+            semgrep-report.*
+
+  # Secret scanning
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Run detect-secrets
+        run: |
+          pip install detect-secrets
+          detect-secrets scan --all-files --force-use-all-plugins \
+            --baseline .secrets.baseline \
+            --exclude-files='\.git/.*' \
+            --exclude-files='.*\.pyc' \
+            --exclude-files='.*\.pyo' \
+            --exclude-files='.*\.jpg' \
+            --exclude-files='.*\.png' \
+            --exclude-files='.*\.gif' \
+            --exclude-files='.*\.pdf' \
+            > secrets-report.json
+            
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified --json --output=trufflehog-report.json
+          
+      - name: Upload secret scan results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: secret-scan-reports
+          path: |
+            secrets-report.json
+            trufflehog-report.json
+
+  # Container security scanning
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [cpu, gpu, dev]
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Build Docker image for scanning
+        run: |
+          docker build -f docker/Dockerfile.${{ matrix.target }} -t scan-target:${{ matrix.target }} .
+          
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'scan-target:${{ matrix.target }}'
+          format: 'json'
+          output: 'trivy-${{ matrix.target }}-report.json'
+          
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'docker/Dockerfile.${{ matrix.target }}'
+          format: 'json'
+          output: 'trivy-config-${{ matrix.target }}-report.json'
+          
+      - name: Run Grype vulnerability scanner
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+          grype scan-target:${{ matrix.target }} -o json > grype-${{ matrix.target }}-report.json
+          
+      - name: Upload container scan results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: container-scan-${{ matrix.target }}
+          path: |
+            trivy-${{ matrix.target }}-report.json
+            trivy-config-${{ matrix.target }}-report.json
+            grype-${{ matrix.target }}-report.json
+
+  # License compliance check
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install pip-licenses
+          
+      - name: Generate license report
+        run: |
+          pip-licenses --format=json --output-file=licenses-report.json
+          pip-licenses --format=plain --output-file=licenses-report.txt
+          
+      - name: Check for prohibited licenses
+        run: |
+          # Define prohibited licenses
+          PROHIBITED_LICENSES=("GPL-3.0" "AGPL-3.0" "LGPL-3.0")
+          
+          # Check for prohibited licenses
+          for license in "${PROHIBITED_LICENSES[@]}"; do
+            if grep -q "$license" licenses-report.txt; then
+              echo "❌ Prohibited license found: $license"
+              exit 1
+            fi
+          done
+          
+          echo "✅ No prohibited licenses found"
+          
+      - name: Upload license report
+        uses: actions/upload-artifact@v3
+        with:
+          name: license-compliance
+          path: |
+            licenses-report.json
+            licenses-report.txt
+
+  # Infrastructure as Code security
+  iac-scan:
+    name: Infrastructure Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Run Checkov IaC scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: dockerfile,kubernetes,helm
+          output_format: json
+          output_file_path: checkov-report.json
+          
+      - name: Run Terrascan
+        uses: accurics/terrascan-action@main
+        with:
+          iac_type: 'docker'
+          iac_dir: 'docker/'
+          policy_type: 'docker'
+          only_warn: true
+          sarif_upload: true
+          
+      - name: Upload IaC scan results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: iac-scan-results
+          path: |
+            checkov-report.json
+            terrascan-results.sarif
+
+  # Network security testing
+  network-security:
+    name: Network Security Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Start test environment
+        run: |
+          docker-compose -f docker/docker-compose.yml up -d
+          sleep 30
+          
+      - name: Install security testing tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nmap nikto
+          
+      - name: Run network security scan
+        run: |
+          # Port scan
+          nmap -sV -sC -oN nmap-scan.txt localhost
+          
+          # Web vulnerability scan
+          nikto -h http://localhost:8080 -output nikto-scan.txt
+          
+      - name: Test SSL/TLS configuration
+        run: |
+          # Test SSL configuration (if HTTPS is enabled)
+          if curl -I https://localhost:8443 2>/dev/null; then
+            echo "Testing SSL configuration"
+            curl --insecure -I https://localhost:8443
+            
+            # Check SSL/TLS with testssl.sh
+            docker run --rm -ti drwetter/testssl.sh https://localhost:8443 | tee ssl-test-results.txt
+          else
+            echo "HTTPS not configured, skipping SSL tests"
+          fi
+          
+      - name: Cleanup test environment
+        if: always()
+        run: |
+          docker-compose -f docker/docker-compose.yml down
+          
+      - name: Upload network security results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: network-security-results
+          path: |
+            nmap-scan.txt
+            nikto-scan.txt
+            ssl-test-results.txt
+
+  # Generate security report
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [sast, secret-scan, container-scan, license-check, iac-scan]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        
+      - name: Generate comprehensive security report
+        run: |
+          cat << EOF > security-report.md
+          # Security Scan Report
+          
+          **Date:** $(date)
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          
+          ## Summary
+          
+          | Scan Type | Status | Critical | High | Medium | Low |
+          |-----------|--------|----------|------|--------|-----|
+          | SAST | ${{ needs.sast.result }} | - | - | - | - |
+          | Secret Scan | ${{ needs.secret-scan.result }} | - | - | - | - |
+          | Container Scan | ${{ needs.container-scan.result }} | - | - | - | - |
+          | License Check | ${{ needs.license-check.result }} | - | - | - | - |
+          | IaC Scan | ${{ needs.iac-scan.result }} | - | - | - | - |
+          
+          ## Detailed Results
+          
+          ### Static Application Security Testing (SAST)
+          EOF
+          
+          # Parse Bandit results
+          if [ -f "sast-reports/bandit-report.json" ]; then
+            echo "#### Bandit Results" >> security-report.md
+            jq -r '.results[] | "- **\(.test_name)**: \(.issue_text)"' sast-reports/bandit-report.json >> security-report.md || true
+          fi
+          
+          # Parse Safety results
+          if [ -f "sast-reports/safety-report.json" ]; then
+            echo "#### Safety Results" >> security-report.md
+            jq -r '.vulnerabilities[] | "- **\(.package)**: \(.vulnerability)"' sast-reports/safety-report.json >> security-report.md || true
+          fi
+          
+          cat << EOF >> security-report.md
+          
+          ### Recommendations
+          
+          1. Address all CRITICAL and HIGH severity vulnerabilities
+          2. Update dependencies with known vulnerabilities
+          3. Review and rotate any exposed secrets
+          4. Ensure container images are regularly updated
+          5. Implement runtime security monitoring
+          
+          ### Next Steps
+          
+          - [ ] Review security findings with security team
+          - [ ] Create tickets for critical/high severity issues
+          - [ ] Update security documentation
+          - [ ] Schedule follow-up scan
+          EOF
+          
+      - name: Upload security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: security-report.md
+          
+      - name: Comment security report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('security-report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔒 Security Scan Results\n\n${report}`
+            });
+
+  # Create security issues for findings
+  create-security-issues:
+    name: Create Security Issues
+    runs-on: ubuntu-latest
+    needs: [security-report]
+    if: github.ref == 'refs/heads/main' && (needs.sast.result == 'failure' || needs.container-scan.result == 'failure')
+    steps:
+      - name: Create security issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const title = `🔒 Security vulnerabilities detected - ${new Date().toISOString().split('T')[0]}`;
+            const body = `
+            Security scan has detected vulnerabilities that require attention.
+            
+            **Scan Results:**
+            - SAST: ${{ needs.sast.result }}
+            - Container Scan: ${{ needs.container-scan.result }}
+            - Secret Scan: ${{ needs.secret-scan.result }}
+            
+            **Action Required:**
+            1. Review the security report artifact from the workflow run
+            2. Prioritize critical and high severity findings
+            3. Create remediation plan
+            4. Update dependencies and fix vulnerabilities
+            
+            **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            `;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['security', 'bug', 'high-priority']
+            });

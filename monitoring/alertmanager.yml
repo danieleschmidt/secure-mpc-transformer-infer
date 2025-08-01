@@ -1,0 +1,192 @@
+# Alertmanager configuration for MPC Transformer monitoring
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alerts@mpc-transformer.local'
+  smtp_auth_username: 'alerts@mpc-transformer.local'
+  smtp_auth_password: 'your-email-password'
+
+# Templates for alert notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route tree for alert routing
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'default-receiver'
+  routes:
+    # High severity alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 0s
+      repeat_interval: 5m
+      
+    # Security alerts - immediate notification  
+    - match:
+        category: security
+      receiver: 'security-alerts'
+      group_wait: 0s
+      repeat_interval: 15m
+      
+    # GPU alerts - specialized handling
+    - match:
+        component: gpu
+      receiver: 'gpu-alerts'
+      group_interval: 30s
+      
+    # MPC protocol alerts
+    - match:
+        component: mpc
+      receiver: 'mpc-alerts'
+      group_interval: 30s
+
+# Alert receivers configuration
+receivers:
+  - name: 'default-receiver'
+    email_configs:
+      - to: 'devops@mpc-transformer.local'
+        subject: '[MPC Alert] {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Labels: {{ range .Labels.SortedPairs }}
+          - {{ .Name }}: {{ .Value }}{{ end }}
+          {{ end }}
+        
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'critical@mpc-transformer.local'
+        subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
+        body: |
+          🚨 CRITICAL ALERT 🚨
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Severity: {{ .Labels.severity }}
+          Component: {{ .Labels.component }}
+          Instance: {{ .Labels.instance }}
+          
+          Description: {{ .Annotations.description }}
+          
+          Runbook: {{ .Annotations.runbook_url }}
+          
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+    slack_configs:
+      - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        channel: '#critical-alerts'
+        title: 'Critical MPC Transformer Alert'
+        text: |
+          {{ range .Alerts }}
+          🚨 *{{ .Annotations.summary }}*
+          
+          *Component:* {{ .Labels.component }}
+          *Severity:* {{ .Labels.severity }}
+          *Instance:* {{ .Labels.instance }}
+          
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        
+  - name: 'security-alerts'
+    email_configs:
+      - to: 'security@mpc-transformer.local'
+        subject: '[SECURITY] {{ .GroupLabels.alertname }}'
+        body: |
+          🔒 SECURITY ALERT 🔒
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Severity: {{ .Labels.severity }}
+          Category: Security
+          
+          Description: {{ .Annotations.description }}
+          
+          Potential Impact: {{ .Annotations.impact }}
+          Recommended Action: {{ .Annotations.action }}
+          
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+    
+  - name: 'gpu-alerts'
+    email_configs:
+      - to: 'gpu-team@mpc-transformer.local'
+        subject: '[GPU] {{ .GroupLabels.alertname }}'
+        body: |
+          🖥️ GPU ALERT 🖥️
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          GPU: {{ .Labels.gpu }}
+          Node: {{ .Labels.instance }}
+          
+          Description: {{ .Annotations.description }}
+          
+          Current Value: {{ .Annotations.current_value }}
+          Threshold: {{ .Annotations.threshold }}
+          
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+          
+  - name: 'mpc-alerts'
+    email_configs:
+      - to: 'mpc-team@mpc-transformer.local'
+        subject: '[MPC] {{ .GroupLabels.alertname }}'
+        body: |
+          🔐 MPC PROTOCOL ALERT 🔐
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Protocol: {{ .Labels.protocol }}
+          Party: {{ .Labels.party_id }}
+          
+          Description: {{ .Annotations.description }}
+          
+          Computation Status: {{ .Annotations.computation_status }}
+          Security Level: {{ .Labels.security_level }}
+          
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+
+# Inhibition rules to reduce alert noise
+inhibit_rules:
+  # Inhibit warning alerts if critical alert is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+    
+  # Inhibit GPU memory alerts if GPU is down
+  - source_match:
+      alertname: 'GPUDown'
+    target_match_re:
+      alertname: 'GPU.*Memory.*'
+    equal: ['gpu', 'instance']
+    
+  # Inhibit MPC computation alerts if network is down
+  - source_match:
+      alertname: 'MPCNetworkDown'
+    target_match_re:
+      alertname: 'MPC.*Computation.*'
+    equal: ['protocol', 'party_id']
+
+# Mute configurations for maintenance windows
+mute_time_intervals:
+  - name: 'maintenance-window'
+    time_intervals:
+      - times:
+          - start_time: '02:00'
+            end_time: '04:00'
+        weekdays: ['sunday']
+        months: ['1:12']
+        
+  - name: 'business-hours'
+    time_intervals:
+      - times:
+          - start_time: '09:00'
+            end_time: '17:00'
+        weekdays: ['monday:friday']

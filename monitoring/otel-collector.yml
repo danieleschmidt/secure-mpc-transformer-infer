@@ -1,0 +1,214 @@
+# OpenTelemetry Collector configuration for MPC Transformer
+# Provides comprehensive observability with metrics, traces, and logs
+
+# Extensions provide additional capabilities
+extensions:
+  health_check:
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679
+  memory_ballast:
+    size_mib: 683
+
+# Receivers define how to receive telemetry data
+receivers:
+  # OTLP receiver for application traces and metrics
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        
+  # Prometheus receiver for scraping metrics
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'mpc-transformer'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['localhost:9090']
+            
+        - job_name: 'otel-collector'
+          scrape_interval: 30s
+          static_configs:
+            - targets: ['localhost:8888']
+            
+  # Host metrics receiver
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      memory:
+        metrics:
+          system.memory.utilization:
+            enabled: true
+      disk:
+      filesystem:
+        metrics:
+          system.filesystem.utilization:
+            enabled: true
+      network:
+      process:
+        mute_process_name_error: true
+        
+  # Docker stats receiver
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 30s
+    timeout: 20s
+    
+  # Log receiver for file-based logs
+  filelog:
+    include:
+      - /var/log/mpc-transformer/*.log
+      - /opt/mpc-transformer/logs/*.log
+    operators:
+      - type: json_parser
+        id: parser-mpc
+        if: 'body matches "^\\{"'
+      - type: time_parser
+        id: time_parser
+        parse_from: attributes.timestamp
+        layout: '%Y-%m-%d %H:%M:%S'
+
+# Processors modify telemetry data
+processors:
+  # Batch processor reduces the number of submissions
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+    
+  # Memory limiter prevents OOM
+  memory_limiter:
+    limit_mib: 512
+    spike_limit_mib: 128
+    check_interval: 5s
+    
+  # Resource processor adds/modifies resource attributes
+  resource:
+    attributes:
+      - key: service.name
+        value: mpc-transformer
+        action: upsert
+      - key: service.version
+        from_attribute: version
+        action: upsert
+      - key: deployment.environment
+        value: production
+        action: upsert
+        
+  # Attributes processor for data enrichment
+  attributes:
+    actions:
+      - key: mpc.protocol
+        action: insert
+        from_attribute: protocol
+      - key: mpc.party_id
+        action: insert
+        from_attribute: party_id
+      - key: mpc.security_level
+        action: insert
+        from_attribute: security_level
+        
+  # Span processor for trace data
+  span:
+    name:
+      from_attributes: [mpc.operation, mpc.protocol]
+      separator: "::"
+      
+  # Probabilistic sampler for traces
+  probabilistic_sampler:
+    sampling_percentage: 10.0
+    
+  # Tail sampling for advanced trace sampling
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 50000
+    expected_new_traces_per_sec: 10
+    policies:
+      - name: errors
+        type: status_code
+        status_code:
+          status_codes: [ERROR]
+      - name: slow
+        type: latency
+        latency:
+          threshold_ms: 5000
+      - name: mpc_operations
+        type: string_attribute
+        string_attribute:
+          key: mpc.operation
+          values: [share_secret, reconstruct_secret, secure_matmul]
+      - name: sample_rate
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 5.0
+
+# Exporters define where to send telemetry data
+exporters:
+  # Prometheus exporter for metrics
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    const_labels:
+      service: mpc-transformer
+      
+  # OTLP exporter for traces to Jaeger
+  otlp/jaeger:
+    endpoint: http://jaeger:14250
+    tls:
+      insecure: true
+      
+  # Logging exporter for debugging
+  logging:
+    loglevel: info
+    
+  # File exporter for metrics backup
+  file/metrics:
+    path: /tmp/otel-metrics.json
+    
+  # Elasticsearch exporter for logs
+  elasticsearch:
+    endpoints: [http://elasticsearch:9200]
+    index: mpc-transformer-logs-%{YYYY.MM.dd}
+    pipeline: mpc-log-pipeline
+
+# Connectors enable complex data routing
+connectors:
+  # Forward connector for multi-destination routing
+  forward:
+    
+# Service defines the telemetry pipeline
+service:
+  extensions: [health_check, pprof, zpages, memory_ballast]
+  
+  pipelines:
+    # Metrics pipeline
+    metrics:
+      receivers: [otlp, prometheus, hostmetrics, docker_stats]
+      processors: [memory_limiter, resource, attributes, batch]
+      exporters: [prometheus, logging, file/metrics]
+      
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, span, tail_sampling, batch]
+      exporters: [otlp/jaeger, logging]
+      
+    # Logs pipeline
+    logs:
+      receivers: [otlp, filelog]
+      processors: [memory_limiter, resource, attributes, batch]
+      exporters: [elasticsearch, logging]
+
+  # Telemetry configuration
+  telemetry:
+    logs:
+      level: "info"
+    metrics:
+      address: 0.0.0.0:8888
