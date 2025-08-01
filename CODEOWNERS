@@ -1,0 +1,60 @@
+# CODEOWNERS file for Secure MPC Transformer
+# This file defines individuals or teams responsible for specific parts of the codebase
+# GitHub will automatically request reviews from code owners when PRs modify their files
+
+# Global owners - fallback for any files not covered by more specific rules
+* @tech-leads @security-team
+
+# Core source code
+/src/ @tech-leads @core-developers
+/src/secure_mpc_transformer/crypto/ @security-team @crypto-experts
+/src/secure_mpc_transformer/protocols/ @security-team @mpc-specialists
+/src/secure_mpc_transformer/gpu/ @performance-team @gpu-experts
+
+# Testing infrastructure
+/tests/ @qa-team @tech-leads
+/tests/security/ @security-team
+/tests/performance/ @performance-team
+
+# Documentation
+/docs/ @tech-writers @tech-leads
+README.md @tech-writers @tech-leads
+SECURITY.md @security-team
+CONTRIBUTING.md @community-managers @tech-leads
+
+# Configuration and build
+pyproject.toml @tech-leads @devops-team
+Makefile @devops-team @tech-leads
+/docker/ @devops-team @infrastructure-team
+/scripts/ @devops-team @automation-team
+
+# CI/CD and workflows
+/.github/ @devops-team @tech-leads
+/docs/workflows/ @devops-team @tech-leads
+
+# Monitoring and observability
+/monitoring/ @sre-team @devops-team
+
+# Security configurations
+/.pre-commit-config.yaml @security-team @tech-leads
+/.secrets.baseline @security-team
+/.bandit @security-team
+/.semgrep.yml @security-team
+/.gitleaks.toml @security-team
+
+# Development environment
+/.devcontainer/ @devops-team @tech-leads
+/.vscode/ @tech-leads
+/.editorconfig @tech-leads
+
+# Dependencies and licenses
+requirements*.txt @security-team @tech-leads
+LICENSE @legal-team @tech-leads
+
+# Project management
+PROJECT_CHARTER.md @product-owners @tech-leads
+/docs/ROADMAP.md @product-owners @tech-leads
+/.github/project-metrics.json @metrics-team @tech-leads
+
+# Architecture decisions
+/docs/adr/ @tech-leads @architecture-team
