@@ -1,0 +1,24 @@
+# Grafana dashboard provisioning configuration
+apiVersion: 1
+
+providers:
+  - name: 'MPC Transformer Dashboards'
+    orgId: 1
+    folder: 'MPC Transformer'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: true
+      
+  - name: 'System Dashboards'
+    orgId: 1
+    folder: 'System'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/system

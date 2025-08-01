@@ -1,0 +1,41 @@
+# Grafana datasource configuration for Prometheus
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: '15s'
+      queryTimeout: '300s'
+      exemplarTraceIdDestinations:
+        - name: traceID
+          datasourceUid: jaeger-uid
+          url: 'http://jaeger:16686/trace/$${__value.raw}'
+    
+  - name: Jaeger
+    type: jaeger
+    uid: jaeger-uid
+    access: proxy
+    url: http://jaeger:16686
+    editable: true
+    jsonData:
+      spanBar:
+        type: 'None'
+      nodeGraph:
+        enabled: true
+    
+  # Additional datasource for long-term metrics (if using remote storage)
+  - name: Prometheus-LongTerm
+    type: prometheus
+    access: proxy
+    url: http://prometheus-remote-storage:8086/api/v1/prom
+    editable: true
+    jsonData:
+      httpMethod: GET
+      timeInterval: '1m'
+      queryTimeout: '600s'
