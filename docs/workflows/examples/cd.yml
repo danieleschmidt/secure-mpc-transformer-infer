@@ -1,0 +1,396 @@
+# Continuous Deployment Workflow for Secure MPC Transformer
+# This file serves as a template - manual creation required due to GitHub App permissions
+
+name: Continuous Deployment
+
+on:
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types: [completed]
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      version:
+        description: 'Version to deploy (leave empty for latest)'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Determine deployment parameters
+  setup:
+    name: Setup Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.determine-env.outputs.environment }}
+      version: ${{ steps.determine-version.outputs.version }}
+      deploy-staging: ${{ steps.determine-env.outputs.deploy-staging }}
+      deploy-production: ${{ steps.determine-env.outputs.deploy-production }}
+    steps:
+      - name: Determine environment
+        id: determine-env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "deploy-staging=${{ github.event.inputs.environment == 'staging' }}" >> $GITHUB_OUTPUT
+            echo "deploy-production=${{ github.event.inputs.environment == 'production' }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "deploy-staging=false" >> $GITHUB_OUTPUT
+            echo "deploy-production=true" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "deploy-staging=true" >> $GITHUB_OUTPUT
+            echo "deploy-production=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Determine version
+        id: determine-version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.version }}" ]]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+  # Deploy to staging environment
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.deploy-staging == 'true'
+    environment:
+      name: staging
+      url: https://staging.mpc-transformer.example.com
+    concurrency:
+      group: staging-deployment
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Setup deployment tools
+        run: |
+          # Install kubectl
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+          
+          # Install helm
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          
+      - name: Configure Kubernetes access
+        run: |
+          echo "${{ secrets.STAGING_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          kubectl config current-context
+          
+      - name: Deploy to staging
+        run: |
+          helm upgrade --install mpc-transformer-staging ./helm/mpc-transformer \
+            --namespace mpc-staging \
+            --create-namespace \
+            --set image.tag=${{ needs.setup.outputs.version }} \
+            --set environment=staging \
+            --set ingress.hosts[0].host=staging.mpc-transformer.example.com \
+            --set replicas=2 \
+            --set resources.limits.memory=4Gi \
+            --set resources.limits.cpu=2 \
+            --wait --timeout=10m
+            
+      - name: Run smoke tests
+        run: |
+          kubectl wait --for=condition=ready pod -l app=mpc-transformer -n mpc-staging --timeout=300s
+          kubectl port-forward svc/mpc-transformer-staging 8080:8080 -n mpc-staging &
+          sleep 10
+          
+          # Basic health check
+          curl -f http://localhost:8080/health || exit 1
+          
+          # API functionality test
+          curl -f -X POST http://localhost:8080/api/v1/inference \
+            -H "Content-Type: application/json" \
+            -d '{"text": "test inference", "model": "bert-base"}' || exit 1
+            
+      - name: Update deployment status
+        if: always()
+        run: |
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ Staging deployment successful"
+          else
+            echo "❌ Staging deployment failed"
+            exit 1
+          fi
+
+  # Security scan of deployed environment
+  security-scan-staging:
+    name: Security Scan Staging
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-staging]
+    if: needs.setup.outputs.deploy-staging == 'true' && success()
+    steps:
+      - name: Container security scan
+        run: |
+          # Scan deployed container images
+          trivy image --severity HIGH,CRITICAL \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.version }}-cpu
+            
+      - name: Network security test
+        run: |
+          # Test SSL/TLS configuration
+          curl -I https://staging.mpc-transformer.example.com
+          
+          # Test for common vulnerabilities
+          nmap -sV --script vuln staging.mpc-transformer.example.com || true
+
+  # Load testing on staging
+  load-test-staging:
+    name: Load Test Staging
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-staging]
+    if: needs.setup.outputs.deploy-staging == 'true' && success()
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+          
+      - name: Run load tests
+        run: |
+          k6 run --out json=load-test-results.json tests/load/staging-load-test.js
+          
+      - name: Upload load test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: load-test-results-staging
+          path: load-test-results.json
+
+  # Deploy to production environment
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [setup, security-scan-staging, load-test-staging]
+    if: needs.setup.outputs.deploy-production == 'true' && (success() || needs.setup.outputs.deploy-staging == 'false')
+    environment:
+      name: production
+      url: https://mpc-transformer.example.com
+    concurrency:
+      group: production-deployment
+      cancel-in-progress: false
+    strategy:
+      matrix:
+        region: [us-east-1, eu-west-1]
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Setup deployment tools
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          
+      - name: Configure Kubernetes access
+        run: |
+          echo "${{ secrets.PRODUCTION_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          kubectl config use-context production-${{ matrix.region }}
+          
+      - name: Pre-deployment backup
+        run: |
+          # Backup current deployment
+          kubectl get deployment mpc-transformer -n mpc-production -o yaml > backup-deployment-${{ matrix.region }}.yaml
+          
+      - name: Deploy to production (Blue-Green)
+        run: |
+          # Deploy to blue environment first
+          helm upgrade --install mpc-transformer-blue ./helm/mpc-transformer \
+            --namespace mpc-production \
+            --create-namespace \
+            --set image.tag=${{ needs.setup.outputs.version }} \
+            --set environment=production \
+            --set region=${{ matrix.region }} \
+            --set ingress.hosts[0].host=mpc-transformer.example.com \
+            --set replicas=5 \
+            --set resources.limits.memory=8Gi \
+            --set resources.limits.cpu=4 \
+            --set autoscaling.enabled=true \
+            --set autoscaling.minReplicas=3 \
+            --set autoscaling.maxReplicas=10 \
+            --wait --timeout=15m
+            
+      - name: Production smoke tests
+        run: |
+          kubectl wait --for=condition=ready pod -l app=mpc-transformer,version=blue -n mpc-production --timeout=600s
+          
+          # Test blue deployment
+          kubectl port-forward svc/mpc-transformer-blue 8080:8080 -n mpc-production &
+          sleep 15
+          
+          # Comprehensive health checks
+          curl -f http://localhost:8080/health || exit 1
+          curl -f http://localhost:8080/metrics || exit 1
+          
+          # Functional tests
+          python tests/production/functional_tests.py --endpoint http://localhost:8080
+          
+      - name: Switch traffic to blue (Green-Blue cutover)
+        run: |
+          # Update ingress to point to blue deployment
+          kubectl patch ingress mpc-transformer -n mpc-production \
+            -p '{"spec":{"rules":[{"host":"mpc-transformer.example.com","http":{"paths":[{"path":"/","pathType":"Prefix","backend":{"service":{"name":"mpc-transformer-blue","port":{"number":8080}}}}]}}]}}'
+            
+          # Wait for traffic switch
+          sleep 30
+          
+      - name: Post-deployment verification
+        run: |
+          # Verify production traffic
+          curl -f https://mpc-transformer.example.com/health
+          
+          # Monitor for errors
+          kubectl logs -l app=mpc-transformer,version=blue -n mpc-production --tail=100
+          
+      - name: Cleanup old green deployment
+        run: |
+          # Remove old green deployment after successful blue deployment
+          helm uninstall mpc-transformer-green -n mpc-production || true
+          
+      - name: Upload deployment artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: production-deployment-${{ matrix.region }}
+          path: |
+            backup-deployment-${{ matrix.region }}.yaml
+
+  # Post-deployment monitoring
+  post-deployment-monitoring:
+    name: Post-Deployment Monitoring
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-production]
+    if: needs.setup.outputs.deploy-production == 'true' && success()
+    steps:
+      - name: Setup monitoring
+        run: |
+          # Monitor key metrics for 10 minutes post-deployment
+          for i in {1..10}; do
+            echo "Monitoring iteration $i/10"
+            
+            # Check error rates
+            curl -s "https://mpc-transformer.example.com/metrics" | grep error_rate || true
+            
+            # Check response times
+            curl -w "@curl-format.txt" -o /dev/null -s "https://mpc-transformer.example.com/health"
+            
+            sleep 60
+          done
+          
+      - name: Alert on anomalies
+        run: |
+          # Check if error rate > 1%
+          ERROR_RATE=$(curl -s "https://mpc-transformer.example.com/metrics" | grep error_rate | awk '{print $2}')
+          if (( $(echo "$ERROR_RATE > 0.01" | bc -l) )); then
+            echo "⚠️ High error rate detected: $ERROR_RATE"
+            # Trigger rollback
+            exit 1
+          fi
+
+  # Rollback mechanism
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-production, post-deployment-monitoring]
+    if: failure() && needs.setup.outputs.deploy-production == 'true'
+    environment:
+      name: production
+    strategy:
+      matrix:
+        region: [us-east-1, eu-west-1]
+    steps:
+      - name: Emergency rollback
+        run: |
+          echo "🚨 Initiating emergency rollback"
+          
+          # Configure kubectl
+          echo "${{ secrets.PRODUCTION_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          kubectl config use-context production-${{ matrix.region }}
+          
+          # Rollback to previous version
+          helm rollback mpc-transformer -n mpc-production
+          
+          # Verify rollback
+          kubectl wait --for=condition=ready pod -l app=mpc-transformer -n mpc-production --timeout=300s
+          
+      - name: Notify team of rollback
+        run: |
+          echo "Rollback completed for region ${{ matrix.region }}"
+          # Send notification to incident response team
+
+  # Generate deployment report
+  deployment-report:
+    name: Generate Deployment Report
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-staging, deploy-production, post-deployment-monitoring]
+    if: always()
+    steps:
+      - name: Generate report
+        run: |
+          cat << EOF > deployment-report.md
+          # Deployment Report
+          
+          **Date:** $(date)
+          **Version:** ${{ needs.setup.outputs.version }}
+          **Environment:** ${{ needs.setup.outputs.environment }}
+          **Triggered by:** ${{ github.event_name }}
+          
+          ## Results
+          - Staging Deployment: ${{ needs.deploy-staging.result || 'Skipped' }}
+          - Production Deployment: ${{ needs.deploy-production.result || 'Skipped' }}
+          - Post-deployment Monitoring: ${{ needs.post-deployment-monitoring.result || 'Skipped' }}
+          
+          ## Metrics
+          - Total deployment time: $(( $(date +%s) - ${{ github.event.head_commit.timestamp }} )) seconds
+          - Regions deployed: us-east-1, eu-west-1
+          
+          ## Links
+          - [Staging Environment](https://staging.mpc-transformer.example.com)
+          - [Production Environment](https://mpc-transformer.example.com)
+          - [Monitoring Dashboard](https://grafana.mpc-transformer.example.com)
+          EOF
+          
+      - name: Upload deployment report
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-report
+          path: deployment-report.md
+          
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('deployment-report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
