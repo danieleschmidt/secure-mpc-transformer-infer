@@ -8,15 +8,14 @@ This directory contains all Architecture Decision Records for the Secure MPC Tra
 |-----|-------|--------|------|---------|
 | [0001](ADR-0001-gpu-acceleration-framework.md) | GPU Acceleration Framework Selection | Accepted | 2024-03-15 | Technical Team |
 | [0002](ADR-0002-mpc-protocol-selection.md) | MPC Protocol Selection Criteria | Accepted | 2024-04-02 | Security Team |
-| [0003](ADR-0003-container-orchestration.md) | Container Orchestration Platform | Accepted | 2024-04-20 | DevOps Team |
-| [0004](ADR-0004-monitoring-observability.md) | Monitoring and Observability Stack | Accepted | 2024-05-10 | SRE Team |
-| [0005](ADR-0005-api-design-principles.md) | API Design Principles and Standards | Accepted | 2024-06-01 | API Team |
 
-## Deprecated ADRs
+## Planned ADRs
 
-| ADR | Title | Status | Date | Superseded By |
-|-----|-------|--------|------|---------------|
-| [0000](ADR-0000-initial-architecture.md) | Initial Architecture Proposal | Deprecated | 2024-02-01 | ADR-0001, ADR-0002 |
+| ADR | Title | Status | Target Date | Owner |
+|-----|-------|--------|-------------|-------|
+| 0003 | Container Orchestration Platform | Planned | Q1 2025 | DevOps Team |
+| 0004 | Monitoring and Observability Stack | Planned | Q1 2025 | SRE Team |
+| 0005 | API Design Principles and Standards | Planned | Q2 2025 | API Team |
 
 ## ADR Categories
 

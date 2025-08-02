@@ -48,10 +48,13 @@ benchmark = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/secure-mpc-transformer"
+Homepage = "https://github.com/danieleschmidt/secure-mpc-transformer-infer"
 Documentation = "https://secure-mpc-transformer.readthedocs.io"
-Repository = "https://github.com/yourusername/secure-mpc-transformer.git"
-Issues = "https://github.com/yourusername/secure-mpc-transformer/issues"
+Repository = "https://github.com/danieleschmidt/secure-mpc-transformer-infer.git"
+Issues = "https://github.com/danieleschmidt/secure-mpc-transformer-infer/issues"
+
+[project.scripts]
+secure-mpc = "secure_mpc_transformer.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
