@@ -1,118 +1,140 @@
-"""Security configuration for MPC transformer inference."""
+"""
+Configuration classes for secure MPC transformer.
+"""
 
-from dataclasses import dataclass
-from enum import Enum
-from typing import Optional, Dict, Any
+import logging
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Union
 
+import torch
 
-class ProtocolType(Enum):
-    """Supported MPC protocols."""
-    SEMI_HONEST_3PC = "semi_honest_3pc"
-    MALICIOUS_3PC = "malicious_3pc"
-    ABY3 = "aby3"
-    BGW = "bgw"
-    REPLICATED_3PC = "replicated_3pc"
-    FANTASTIC_FOUR = "fantastic_four"
-
-
-class SecurityLevel(Enum):
-    """Security levels in bits."""
-    BITS_80 = 80
-    BITS_128 = 128
-    BITS_256 = 256
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class SecurityConfig:
-    """Configuration for secure computation."""
+    """
+    Configuration for secure computation parameters.
     
-    protocol: ProtocolType = ProtocolType.SEMI_HONEST_3PC
-    security_level: SecurityLevel = SecurityLevel.BITS_128
-    gpu_acceleration: bool = True
-    party_id: int = 0
-    num_parties: int = 3
+    Defines security level, protocol choice, and cryptographic parameters
+    for the secure MPC transformer system.
+    """
+    
+    # Protocol configuration
+    protocol: str = "semi_honest_3pc"  # MPC protocol to use
+    num_parties: int = 3  # Number of parties in computation
+    party_id: int = 0  # ID of this party (0-indexed)
+    
+    # Security parameters
+    security_level: int = 128  # Security level in bits
+    field_size: int = 2**31 - 1  # Prime field size for arithmetic
+    threshold: int = 1  # Threshold for secret sharing (t-out-of-n)
+    
+    # GPU configuration
+    gpu_acceleration: bool = True  # Enable GPU acceleration
+    device: str = "cuda"  # Device to use ("cuda" or "cpu")
+    gpu_memory_fraction: float = 0.9  # Fraction of GPU memory to use
     
     # Network configuration
-    host: str = "localhost"
-    port: int = 50051
-    use_tls: bool = True
-    cert_file: Optional[str] = None
-    key_file: Optional[str] = None
-    ca_file: Optional[str] = None
-    
-    # Performance tuning
-    batch_size: int = 32
-    num_threads: int = 8
-    gpu_memory_fraction: float = 0.9
+    network_config: Dict[str, Union[str, int]] = field(default_factory=lambda: {
+        "host": "localhost",
+        "base_port": 50000,
+        "timeout": 30,
+        "use_tls": True
+    })
     
     # Privacy parameters
-    differential_privacy: bool = False
-    epsilon: float = 3.0
-    delta: float = 1e-5
+    differential_privacy: bool = False  # Enable differential privacy
+    epsilon: float = 3.0  # Privacy budget (ε)
+    delta: float = 1e-5  # Privacy parameter (δ)
     
-    # Protocol-specific parameters
-    protocol_params: Dict[str, Any] = None
+    # Performance parameters
+    batch_size: int = 32  # Default batch size
+    max_sequence_length: int = 512  # Maximum sequence length
+    
+    # Randomness
+    seed: Optional[int] = None  # Random seed for reproducibility
     
     def __post_init__(self):
-        if self.protocol_params is None:
-            self.protocol_params = {}
-            
-        # Set default protocol parameters
-        if self.protocol == ProtocolType.ABY3:
-            self.protocol_params.setdefault("ring_size", 2**64)
-            self.protocol_params.setdefault("mac_key_size", 128)
-            self.protocol_params.setdefault("preprocessing_mode", "online")
-        elif self.protocol == ProtocolType.FANTASTIC_FOUR:
-            self.protocol_params.setdefault("shares_per_party", 2)
-            self.protocol_params.setdefault("communication_rounds", 3)
-            self.protocol_params.setdefault("packing_factor", 128)
-    
-    def validate(self) -> None:
         """Validate configuration parameters."""
-        if self.num_parties < 2:
-            raise ValueError("Need at least 2 parties for MPC")
+        self._validate_protocol()
+        self._validate_security_params()
+        self._validate_gpu_config()
+        self._validate_privacy_params()
         
-        if self.party_id >= self.num_parties:
-            raise ValueError(f"Party ID {self.party_id} must be < {self.num_parties}")
+        logger.info(f"Initialized SecurityConfig: {self.protocol} with {self.num_parties} parties")
+    
+    def _validate_protocol(self):
+        """Validate protocol configuration."""
+        supported_protocols = [
+            "semi_honest_3pc", "malicious_3pc", "aby3", 
+            "replicated_3pc", "shamir", "additive", "bgw"
+        ]
         
-        if self.gpu_memory_fraction <= 0 or self.gpu_memory_fraction > 1:
-            raise ValueError("GPU memory fraction must be in (0, 1]")
+        if self.protocol not in supported_protocols:
+            raise ValueError(f"Unsupported protocol: {self.protocol}. "
+                           f"Supported: {supported_protocols}")
         
-        if self.differential_privacy and (self.epsilon <= 0 or self.delta <= 0):
-            raise ValueError("Invalid differential privacy parameters")
+        if self.party_id < 0 or self.party_id >= self.num_parties:
+            raise ValueError(f"Invalid party_id {self.party_id} for {self.num_parties} parties")
+        
+        # Protocol-specific validations
+        if "3pc" in self.protocol and self.num_parties != 3:
+            raise ValueError(f"Protocol {self.protocol} requires exactly 3 parties")
+        
+        if self.protocol == "shamir" and self.threshold >= self.num_parties:
+            raise ValueError(f"Shamir threshold {self.threshold} must be < num_parties {self.num_parties}")
     
-    @classmethod
-    def for_protocol(cls, protocol_name: str, **kwargs) -> "SecurityConfig":
-        """Create configuration for specific protocol."""
-        protocol = ProtocolType(protocol_name)
-        return cls(protocol=protocol, **kwargs)
+    def _validate_security_params(self):
+        """Validate security parameters."""
+        if self.security_level < 80:
+            logger.warning(f"Security level {self.security_level} is below recommended minimum of 80 bits")
+        
+        if self.security_level > 256:
+            logger.warning(f"Security level {self.security_level} is higher than typical maximum of 256 bits")
+        
+        if self.field_size <= 0:
+            raise ValueError("Field size must be positive")
+        
+        # Check if field_size is reasonable for security level
+        min_field_bits = max(self.security_level, 31)
+        if self.field_size.bit_length() < min_field_bits:
+            logger.warning(f"Field size may be too small for security level {self.security_level}")
     
-    @classmethod
-    def production_config(cls, party_id: int, num_parties: int = 3) -> "SecurityConfig":
-        """Production-ready configuration."""
-        return cls(
-            protocol=ProtocolType.MALICIOUS_3PC,
-            security_level=SecurityLevel.BITS_128,
-            gpu_acceleration=True,
-            party_id=party_id,
-            num_parties=num_parties,
-            use_tls=True,
-            differential_privacy=True,
-            batch_size=64,
-            num_threads=16
-        )
+    def _validate_gpu_config(self):
+        """Validate GPU configuration."""
+        if self.gpu_acceleration and not torch.cuda.is_available():
+            logger.warning("GPU acceleration requested but CUDA not available, falling back to CPU")
+            self.gpu_acceleration = False
+            self.device = "cpu"
+        
+        if self.device not in ["cuda", "cpu"]:
+            raise ValueError(f"Unsupported device: {self.device}")
+        
+        if not 0.1 <= self.gpu_memory_fraction <= 1.0:
+            raise ValueError(f"GPU memory fraction {self.gpu_memory_fraction} must be between 0.1 and 1.0")
     
-    @classmethod
-    def development_config(cls, party_id: int = 0) -> "SecurityConfig":
-        """Development/testing configuration."""
-        return cls(
-            protocol=ProtocolType.SEMI_HONEST_3PC,
-            security_level=SecurityLevel.BITS_80,
-            gpu_acceleration=False,
-            party_id=party_id,
-            num_parties=3,
-            use_tls=False,
-            differential_privacy=False,
-            batch_size=16,
-            num_threads=4
-        )
+    def _validate_privacy_params(self):
+        """Validate differential privacy parameters."""
+        if self.differential_privacy:
+            if self.epsilon <= 0:
+                raise ValueError(f"Privacy budget epsilon {self.epsilon} must be positive")
+            
+            if self.delta < 0 or self.delta >= 1:
+                raise ValueError(f"Privacy parameter delta {self.delta} must be in [0, 1)")
+            
+            if self.epsilon > 10:
+                logger.warning(f"Large epsilon {self.epsilon} may not provide meaningful privacy")
+    
+    def get_device(self) -> torch.device:
+        """Get the configured PyTorch device."""
+        if self.device == "cuda" and torch.cuda.is_available():
+            return torch.device("cuda")
+        else:
+            return torch.device("cpu")
+    
+    def get_network_address(self, party_id: Optional[int] = None) -> str:
+        """Get network address for a specific party."""
+        target_party = party_id if party_id is not None else self.party_id
+        port = self.network_config["base_port"] + target_party
+        return f"{self.network_config['host']}:{port}"
