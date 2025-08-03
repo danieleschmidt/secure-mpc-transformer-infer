@@ -8,8 +8,17 @@ __version__ = "0.1.0"
 __author__ = "Daniel Schmidt"
 __email__ = "author@example.com"
 
-from .models.secure_transformer import SecureTransformer
+from .models.secure_transformer import SecureTransformer, TransformerConfig
 from .protocols.factory import ProtocolFactory
 from .config import SecurityConfig
+from .services import InferenceService, SecurityService, ModelService
 
-__all__ = ["SecureTransformer", "ProtocolFactory", "SecurityConfig"]
+__all__ = [
+    "SecureTransformer", 
+    "TransformerConfig",
+    "ProtocolFactory", 
+    "SecurityConfig",
+    "InferenceService",
+    "SecurityService", 
+    "ModelService"
+]
