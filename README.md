@@ -82,7 +82,7 @@ open http://localhost:8080
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/secure-mpc-transformer-infer.git
+git clone https://github.com/danieleschmidt/secure-mpc-transformer-infer.git
 cd secure-mpc-transformer-infer
 
 # Install system dependencies
@@ -500,7 +500,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ```bibtex
 @inproceedings{secure_mpc_transformer_2025,
   title={GPU-Accelerated MPC for Practical Transformer Inference},
-  author={Your Name et al.},
+  author={Daniel Schmidt},
   booktitle={Network and Distributed System Security Symposium (NDSS)},
   year={2025}
 }
