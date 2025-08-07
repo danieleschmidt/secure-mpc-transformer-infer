@@ -12,6 +12,7 @@ from .models.secure_transformer import SecureTransformer, TransformerConfig
 from .protocols.factory import ProtocolFactory
 from .config import SecurityConfig
 from .services import InferenceService, SecurityService, ModelService
+from .planning import QuantumTaskPlanner, QuantumScheduler, TaskPriority
 
 __all__ = [
     "SecureTransformer", 
@@ -20,5 +21,8 @@ __all__ = [
     "SecurityConfig",
     "InferenceService",
     "SecurityService", 
-    "ModelService"
+    "ModelService",
+    "QuantumTaskPlanner",
+    "QuantumScheduler",
+    "TaskPriority"
 ]
