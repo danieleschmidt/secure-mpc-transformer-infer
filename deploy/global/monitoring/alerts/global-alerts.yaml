@@ -1,0 +1,432 @@
+# Global alerting rules for MPC Transformer production deployment
+
+groups:
+- name: mpc-transformer-global-sla
+  rules:
+  # Global SLA Alerts
+  - alert: GlobalSLAViolation
+    expr: (
+        sum(rate(mpc_transformer_requests_total[5m])) - 
+        sum(rate(mpc_transformer_errors_total[5m]))
+      ) / sum(rate(mpc_transformer_requests_total[5m])) < 0.9999
+    for: 1m
+    labels:
+      severity: critical
+      team: platform
+      service: mpc-transformer
+      alert_type: sla
+    annotations:
+      summary: "Global SLA violation - availability below 99.99%"
+      description: "Global service availability is {{ $value | humanizePercentage }} which is below the 99.99% SLA requirement"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/sla-violation"
+      dashboard_url: "https://grafana.mpc-transformer.com/d/mpc-global-overview"
+
+  - alert: RegionalSLAViolation
+    expr: (
+        sum by (region) (rate(mpc_transformer_requests_total[5m])) - 
+        sum by (region) (rate(mpc_transformer_errors_total[5m]))
+      ) / sum by (region) (rate(mpc_transformer_requests_total[5m])) < 0.999
+    for: 2m
+    labels:
+      severity: warning
+      team: platform
+      service: mpc-transformer
+      alert_type: sla
+    annotations:
+      summary: "Regional SLA violation in {{ $labels.region }}"
+      description: "Service availability in {{ $labels.region }} is {{ $value | humanizePercentage }} which is below the regional 99.9% SLA"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/regional-sla-violation"
+
+  # High Latency Alerts
+  - alert: GlobalHighLatency
+    expr: histogram_quantile(0.95, sum(rate(mpc_transformer_inference_duration_seconds_bucket[5m]))) > 0.1
+    for: 2m
+    labels:
+      severity: warning
+      team: platform
+      service: mpc-transformer
+      alert_type: performance
+    annotations:
+      summary: "Global P95 latency is high"
+      description: "Global P95 latency is {{ $value | humanizeDuration }} which exceeds the 100ms threshold"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/high-latency"
+
+  - alert: RegionalHighLatency
+    expr: histogram_quantile(0.95, sum by (region) (rate(mpc_transformer_inference_duration_seconds_bucket[5m]))) > 0.15
+    for: 3m
+    labels:
+      severity: warning
+      team: platform
+      service: mpc-transformer
+      alert_type: performance
+    annotations:
+      summary: "High P95 latency in {{ $labels.region }}"
+      description: "P95 latency in {{ $labels.region }} is {{ $value | humanizeDuration }} which exceeds the regional 150ms threshold"
+
+- name: mpc-transformer-global-availability
+  rules:
+  # Service Down Alerts
+  - alert: RegionCompletelyDown
+    expr: sum by (region) (up{job="mpc-transformer"}) == 0
+    for: 30s
+    labels:
+      severity: critical
+      team: platform
+      service: mpc-transformer
+      alert_type: availability
+      pager: "true"
+    annotations:
+      summary: "Complete service outage in {{ $labels.region }}"
+      description: "All MPC transformer instances are down in {{ $labels.region }}"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/complete-outage"
+      escalation_policy: "immediate"
+
+  - alert: MultipleRegionsDown
+    expr: count(sum by (region) (up{job="mpc-transformer"}) == 0) >= 2
+    for: 1m
+    labels:
+      severity: critical
+      team: platform
+      service: mpc-transformer
+      alert_type: availability
+      pager: "true"
+    annotations:
+      summary: "Multiple regions experiencing outages"
+      description: "{{ $value }} regions are completely down - potential global service disruption"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/multi-region-outage"
+      escalation_policy: "immediate"
+
+  - alert: LowRegionalAvailability
+    expr: sum by (region) (up{job="mpc-transformer"}) / count by (region) (up{job="mpc-transformer"}) < 0.5
+    for: 2m
+    labels:
+      severity: warning
+      team: platform
+      service: mpc-transformer
+      alert_type: availability
+    annotations:
+      summary: "Low service availability in {{ $labels.region }}"
+      description: "Only {{ $value | humanizePercentage }} of instances are up in {{ $labels.region }}"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/low-availability"
+
+- name: mpc-transformer-global-errors
+  rules:
+  # Error Rate Alerts
+  - alert: GlobalHighErrorRate
+    expr: sum(rate(mpc_transformer_errors_total[5m])) / sum(rate(mpc_transformer_requests_total[5m])) > 0.01
+    for: 1m
+    labels:
+      severity: critical
+      team: platform
+      service: mpc-transformer
+      alert_type: errors
+    annotations:
+      summary: "Global error rate is above 1%"
+      description: "Global error rate is {{ $value | humanizePercentage }} which exceeds the 1% threshold"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/high-error-rate"
+
+  - alert: RegionalHighErrorRate
+    expr: sum by (region) (rate(mpc_transformer_errors_total[5m])) / sum by (region) (rate(mpc_transformer_requests_total[5m])) > 0.05
+    for: 2m
+    labels:
+      severity: warning
+      team: platform
+      service: mpc-transformer
+      alert_type: errors
+    annotations:
+      summary: "High error rate in {{ $labels.region }}"
+      description: "Error rate in {{ $labels.region }} is {{ $value | humanizePercentage }} which exceeds the regional 5% threshold"
+
+  # MPC Protocol Errors
+  - alert: MPCProtocolErrors
+    expr: sum by (region, protocol) (rate(mpc_transformer_protocol_errors_total[5m])) > 0.1
+    for: 1m
+    labels:
+      severity: warning
+      team: crypto
+      service: mpc-transformer
+      alert_type: protocol
+    annotations:
+      summary: "MPC protocol errors in {{ $labels.region }}"
+      description: "{{ $labels.protocol }} protocol error rate in {{ $labels.region }} is {{ $value }}/sec"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/protocol-errors"
+
+- name: mpc-transformer-global-resources
+  rules:
+  # Resource Utilization Alerts
+  - alert: GlobalHighCPUUsage
+    expr: avg(cpu_usage_percent{job="mpc-transformer"}) > 80
+    for: 5m
+    labels:
+      severity: warning
+      team: platform
+      service: mpc-transformer
+      alert_type: resources
+    annotations:
+      summary: "Global CPU usage is high"
+      description: "Average CPU usage across all regions is {{ $value }}%"
+
+  - alert: RegionalHighCPUUsage
+    expr: avg by (region) (cpu_usage_percent{job="mpc-transformer"}) > 85
+    for: 5m
+    labels:
+      severity: warning
+      team: platform
+      service: mpc-transformer
+      alert_type: resources
+    annotations:
+      summary: "High CPU usage in {{ $labels.region }}"
+      description: "Average CPU usage in {{ $labels.region }} is {{ $value }}%"
+
+  - alert: GPUOutOfMemory
+    expr: nvidia_gpu_memory_used_bytes / nvidia_gpu_memory_total_bytes > 0.95
+    for: 1m
+    labels:
+      severity: critical
+      team: ml
+      service: mpc-transformer
+      alert_type: resources
+    annotations:
+      summary: "GPU memory exhaustion on {{ $labels.instance }}"
+      description: "GPU memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/gpu-oom"
+
+  - alert: LowGPUUtilization
+    expr: avg by (region) (nvidia_gpu_utilization) < 20
+    for: 10m
+    labels:
+      severity: info
+      team: platform
+      service: mpc-transformer
+      alert_type: efficiency
+    annotations:
+      summary: "Low GPU utilization in {{ $labels.region }}"
+      description: "Average GPU utilization in {{ $labels.region }} is only {{ $value }}%"
+
+- name: mpc-transformer-global-security
+  rules:
+  # Security Alerts
+  - alert: SecurityIncidentDetected
+    expr: sum by (region, incident_type) (rate(mpc_transformer_security_incidents_total[1m])) > 0
+    for: 0s
+    labels:
+      severity: critical
+      team: security
+      service: mpc-transformer
+      alert_type: security
+      pager: "true"
+    annotations:
+      summary: "Security incident detected in {{ $labels.region }}"
+      description: "{{ $labels.incident_type }} security incident detected in {{ $labels.region }}"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/security-incident"
+      escalation_policy: "immediate"
+
+  - alert: TLSCertificateExpiringSoon
+    expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+    for: 0s
+    labels:
+      severity: warning
+      team: security
+      service: mpc-transformer
+      alert_type: certificates
+    annotations:
+      summary: "TLS certificate expiring soon"
+      description: "TLS certificate for {{ $labels.instance }} will expire in {{ $value }} days"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/cert-renewal"
+
+  - alert: AuthenticationFailures
+    expr: sum by (region) (rate(mpc_transformer_auth_failures_total[5m])) > 5
+    for: 2m
+    labels:
+      severity: warning
+      team: security
+      service: mpc-transformer
+      alert_type: authentication
+    annotations:
+      summary: "High authentication failure rate in {{ $labels.region }}"
+      description: "Authentication failure rate in {{ $labels.region }} is {{ $value }}/sec"
+
+- name: mpc-transformer-global-compliance
+  rules:
+  # Compliance Alerts
+  - alert: GDPRViolationRisk
+    expr: sum by (region) (mpc_transformer_gdpr_violation_risk_score) > 7
+    for: 1m
+    labels:
+      severity: critical
+      team: compliance
+      service: mpc-transformer
+      alert_type: compliance
+    annotations:
+      summary: "High GDPR violation risk in {{ $labels.region }}"
+      description: "GDPR violation risk score in {{ $labels.region }} is {{ $value }}/10"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/gdpr-violation"
+
+  - alert: ComplianceAuditFailure
+    expr: sum by (region, framework) (mpc_transformer_compliance_audit_failures_total) > 0
+    for: 0s
+    labels:
+      severity: warning
+      team: compliance
+      service: mpc-transformer
+      alert_type: compliance
+    annotations:
+      summary: "Compliance audit failure in {{ $labels.region }}"
+      description: "{{ $labels.framework }} compliance audit failed in {{ $labels.region }}"
+
+  - alert: DataRetentionPolicyViolation
+    expr: sum by (region) (mpc_transformer_data_retention_violations_total) > 0
+    for: 0s
+    labels:
+      severity: warning
+      team: compliance
+      service: mpc-transformer
+      alert_type: compliance
+    annotations:
+      summary: "Data retention policy violation in {{ $labels.region }}"
+      description: "Data retention policy violation detected in {{ $labels.region }}"
+
+- name: mpc-transformer-global-business
+  rules:
+  # Business Impact Alerts
+  - alert: LowTrafficVolume
+    expr: sum(rate(mpc_transformer_requests_total[5m])) < 10
+    for: 10m
+    labels:
+      severity: warning
+      team: business
+      service: mpc-transformer
+      alert_type: business
+    annotations:
+      summary: "Unusually low global traffic volume"
+      description: "Global request rate is only {{ $value }}/sec which is unusually low"
+
+  - alert: RevenueImpactingOutage
+    expr: (
+        sum(rate(mpc_transformer_requests_total[5m])) -
+        sum(rate(mpc_transformer_errors_total[5m]))
+      ) / sum(rate(mpc_transformer_requests_total[5m])) < 0.95
+    for: 5m
+    labels:
+      severity: critical
+      team: business
+      service: mpc-transformer
+      alert_type: business
+      pager: "true"
+    annotations:
+      summary: "Service degradation impacting revenue"
+      description: "Service availability is {{ $value | humanizePercentage }} - significant business impact expected"
+      escalation_policy: "business-critical"
+
+  - alert: CustomerSLABreach
+    expr: |
+      (
+        histogram_quantile(0.95, sum(rate(mpc_transformer_inference_duration_seconds_bucket[5m]))) > 0.2
+        and
+        sum(rate(mpc_transformer_requests_total[5m])) > 100
+      )
+    for: 3m
+    labels:
+      severity: critical
+      team: customer-success
+      service: mpc-transformer
+      alert_type: sla
+    annotations:
+      summary: "Customer SLA breach - P95 latency exceeds 200ms"
+      description: "P95 latency is {{ $value | humanizeDuration }} which breaches customer SLA agreements"
+
+- name: mpc-transformer-global-infrastructure
+  rules:
+  # Infrastructure Alerts
+  - alert: KubernetesClusterUnhealthy
+    expr: up{job="kubernetes-apiservers"} == 0
+    for: 1m
+    labels:
+      severity: critical
+      team: infrastructure
+      service: kubernetes
+      alert_type: infrastructure
+      pager: "true"
+    annotations:
+      summary: "Kubernetes API server down"
+      description: "Kubernetes API server is unreachable in {{ $labels.region }}"
+      escalation_policy: "immediate"
+
+  - alert: EtcdClusterUnhealthy
+    expr: up{job="etcd"} == 0
+    for: 30s
+    labels:
+      severity: critical
+      team: infrastructure
+      service: etcd
+      alert_type: infrastructure
+      pager: "true"
+    annotations:
+      summary: "Etcd cluster unhealthy"
+      description: "Etcd cluster member {{ $labels.instance }} is down"
+      escalation_policy: "immediate"
+
+  - alert: LoadBalancerUnhealthy
+    expr: probe_success{job="loadbalancer-probe"} == 0
+    for: 1m
+    labels:
+      severity: critical
+      team: infrastructure
+      service: load-balancer
+      alert_type: infrastructure
+    annotations:
+      summary: "Load balancer health check failing"
+      description: "Load balancer health check failing for {{ $labels.instance }}"
+
+  # Cross-region connectivity
+  - alert: CrossRegionConnectivityLoss
+    expr: up{job="cross-region-probe"} == 0
+    for: 2m
+    labels:
+      severity: critical
+      team: infrastructure
+      service: network
+      alert_type: connectivity
+    annotations:
+      summary: "Cross-region connectivity lost"
+      description: "Cross-region connectivity lost between {{ $labels.source_region }} and {{ $labels.target_region }}"
+      runbook_url: "https://docs.mpc-transformer.com/runbooks/cross-region-connectivity"
+
+- name: mpc-transformer-global-data
+  rules:
+  # Data-related alerts
+  - alert: DatabaseConnectionFailure
+    expr: up{job="postgres-exporter"} == 0
+    for: 1m
+    labels:
+      severity: critical
+      team: data
+      service: database
+      alert_type: data
+    annotations:
+      summary: "Database connection failure"
+      description: "Cannot connect to database {{ $labels.instance }}"
+
+  - alert: HighDatabaseConnections
+    expr: pg_stat_activity_count / pg_settings_max_connections > 0.8
+    for: 2m
+    labels:
+      severity: warning
+      team: data
+      service: database
+      alert_type: data
+    annotations:
+      summary: "High database connection usage"
+      description: "Database connection usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+
+  - alert: DataSyncLag
+    expr: mpc_transformer_data_sync_lag_seconds > 300
+    for: 2m
+    labels:
+      severity: warning
+      team: data
+      service: mpc-transformer
+      alert_type: data
+    annotations:
+      summary: "High data synchronization lag"
+      description: "Data sync lag between regions is {{ $value | humanizeDuration }}"

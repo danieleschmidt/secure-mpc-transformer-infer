@@ -1,0 +1,386 @@
+# Global DNS Configuration with Health-based Failover
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: global-dns-config
+  namespace: dns-system
+  labels:
+    app: dns-management
+    tier: global-routing
+data:
+  # Cloudflare DNS configuration
+  cloudflare.yaml: |
+    cloudflare:
+      api_token: "${CLOUDFLARE_API_TOKEN}"
+      zone_id: "${CLOUDFLARE_ZONE_ID}"
+      
+      # Global load balancer pools
+      load_balancer_pools:
+        - name: "americas-primary"
+          description: "Americas primary pool (US East/West)"
+          origins:
+            - name: "us-east-1"
+              address: "us-east.mpc-transformer.com"
+              weight: 1.0
+              enabled: true
+              header:
+                Host: ["api.mpc-transformer.com"]
+            - name: "us-west-2"
+              address: "us-west.mpc-transformer.com"
+              weight: 0.8
+              enabled: true
+              header:
+                Host: ["api.mpc-transformer.com"]
+          monitor: "americas-health-check"
+          health_threshold: 1
+          notification_email: "ops@mpc-transformer.com"
+          
+        - name: "europe-primary"
+          description: "Europe primary pool (Ireland/Frankfurt)"
+          origins:
+            - name: "eu-west-1"
+              address: "eu-west.mpc-transformer.com"
+              weight: 1.0
+              enabled: true
+              header:
+                Host: ["eu.mpc-transformer.com"]
+            - name: "eu-central-1"
+              address: "eu-central.mpc-transformer.com"
+              weight: 0.8
+              enabled: true
+              header:
+                Host: ["eu.mpc-transformer.com"]
+          monitor: "europe-health-check"
+          health_threshold: 1
+          notification_email: "ops-eu@mpc-transformer.com"
+          
+        - name: "apac-primary"
+          description: "APAC primary pool (Tokyo/Singapore)"
+          origins:
+            - name: "ap-northeast-1"
+              address: "ap-northeast.mpc-transformer.com"
+              weight: 1.0
+              enabled: true
+              header:
+                Host: ["asia.mpc-transformer.com"]
+            - name: "ap-southeast-1"
+              address: "ap-southeast.mpc-transformer.com"
+              weight: 0.8
+              enabled: true
+              header:
+                Host: ["asia.mpc-transformer.com"]
+          monitor: "apac-health-check"
+          health_threshold: 1
+          notification_email: "ops-apac@mpc-transformer.com"
+      
+      # Health check monitors
+      health_monitors:
+        - name: "americas-health-check"
+          type: "https"
+          description: "Americas region health check"
+          path: "/health"
+          interval: 30
+          timeout: 10
+          retries: 3
+          expected_codes: "200"
+          method: "GET"
+          headers:
+            Host: ["api.mpc-transformer.com"]
+            User-Agent: ["Cloudflare-Health-Check"]
+          follow_redirects: false
+          allow_insecure: false
+          
+        - name: "europe-health-check"
+          type: "https"
+          description: "Europe region health check"
+          path: "/health"
+          interval: 30
+          timeout: 10
+          retries: 3
+          expected_codes: "200"
+          method: "GET"
+          headers:
+            Host: ["eu.mpc-transformer.com"]
+            User-Agent: ["Cloudflare-Health-Check"]
+          follow_redirects: false
+          allow_insecure: false
+          
+        - name: "apac-health-check"
+          type: "https"
+          description: "APAC region health check"
+          path: "/health"
+          interval: 30
+          timeout: 10
+          retries: 3
+          expected_codes: "200"
+          method: "GET"
+          headers:
+            Host: ["asia.mpc-transformer.com"]
+            User-Agent: ["Cloudflare-Health-Check"]
+          follow_redirects: false
+          allow_insecure: false
+      
+      # Global load balancer configuration
+      load_balancers:
+        - name: "global-api"
+          description: "Global API load balancer with regional failover"
+          fallback_pool: "americas-primary"
+          default_pools: ["americas-primary", "europe-primary", "apac-primary"]
+          region_pools:
+            WNAM: ["americas-primary", "europe-primary"]  # Western North America
+            ENAM: ["americas-primary", "europe-primary"]  # Eastern North America
+            SAM: ["americas-primary", "apac-primary"]      # South America
+            WEU: ["europe-primary", "americas-primary"]    # Western Europe
+            EEU: ["europe-primary", "apac-primary"]        # Eastern Europe
+            SEAS: ["apac-primary", "europe-primary"]       # Southeast Asia
+            NEAS: ["apac-primary", "americas-primary"]     # Northeast Asia
+            OCE: ["apac-primary", "americas-primary"]      # Oceania
+          pop_pools:
+            # Americas PoPs
+            LAX: ["americas-primary", "apac-primary"]
+            IAD: ["americas-primary", "europe-primary"]
+            MIA: ["americas-primary", "europe-primary"]
+            # Europe PoPs
+            LHR: ["europe-primary", "americas-primary"]
+            FRA: ["europe-primary", "apac-primary"]
+            AMS: ["europe-primary", "americas-primary"]
+            # APAC PoPs
+            NRT: ["apac-primary", "americas-primary"]
+            SIN: ["apac-primary", "europe-primary"]
+            SYD: ["apac-primary", "americas-primary"]
+          session_affinity: "cookie"
+          session_affinity_ttl: 3600
+          steering_policy: "geo"
+          
+      # DNS records
+      dns_records:
+        - name: "api"
+          type: "CNAME"
+          content: "global-api.mpc-transformer.com.cdn.cloudflare.net"
+          ttl: 300
+          proxied: true
+        - name: "eu"
+          type: "CNAME"
+          content: "europe-primary.mpc-transformer.com"
+          ttl: 300
+          proxied: true
+        - name: "asia"
+          type: "CNAME"
+          content: "apac-primary.mpc-transformer.com"
+          ttl: 300
+          proxied: true
+
+  # Route53 configuration for AWS
+  route53.yaml: |
+    route53:
+      hosted_zone_id: "${ROUTE53_HOSTED_ZONE_ID}"
+      
+      # Health checks
+      health_checks:
+        - name: "americas-health"
+          type: "HTTPS"
+          resource_path: "/health"
+          fqdn: "us-east.mpc-transformer.com"
+          port: 443
+          request_interval: 30
+          failure_threshold: 3
+          measure_latency: true
+          regions: ["us-east-1", "us-west-2", "eu-west-1"]
+          
+        - name: "europe-health"
+          type: "HTTPS"
+          resource_path: "/health"
+          fqdn: "eu-west.mpc-transformer.com"
+          port: 443
+          request_interval: 30
+          failure_threshold: 3
+          measure_latency: true
+          regions: ["eu-west-1", "eu-central-1", "us-east-1"]
+          
+        - name: "apac-health"
+          type: "HTTPS"
+          resource_path: "/health"
+          fqdn: "ap-northeast.mpc-transformer.com"
+          port: 443
+          request_interval: 30
+          failure_threshold: 3
+          measure_latency: true
+          regions: ["ap-northeast-1", "ap-southeast-1", "us-west-2"]
+      
+      # Geolocation routing
+      record_sets:
+        - name: "api.mpc-transformer.com"
+          type: "A"
+          set_identifier: "Americas"
+          geolocation:
+            continent_code: "NA"
+          alias_target:
+            dns_name: "americas-lb.us-east-1.elb.amazonaws.com"
+            zone_id: "Z35SXDOTRQ7X7K"
+            evaluate_target_health: true
+          health_check_id: "americas-health"
+          
+        - name: "api.mpc-transformer.com"
+          type: "A"
+          set_identifier: "Europe"
+          geolocation:
+            continent_code: "EU"
+          alias_target:
+            dns_name: "europe-lb.eu-west-1.elb.amazonaws.com"
+            zone_id: "Z32O12XQLNTSW2"
+            evaluate_target_health: true
+          health_check_id: "europe-health"
+          
+        - name: "api.mpc-transformer.com"
+          type: "A"
+          set_identifier: "APAC"
+          geolocation:
+            continent_code: "AS"
+          alias_target:
+            dns_name: "apac-lb.ap-northeast-1.elb.amazonaws.com"
+            zone_id: "Z14GRHDCWA56QT"
+            evaluate_target_health: true
+          health_check_id: "apac-health"
+          
+        # Default fallback to Americas
+        - name: "api.mpc-transformer.com"
+          type: "A"
+          set_identifier: "Default"
+          geolocation:
+            country_code: "*"
+          alias_target:
+            dns_name: "americas-lb.us-east-1.elb.amazonaws.com"
+            zone_id: "Z35SXDOTRQ7X7K"
+            evaluate_target_health: true
+          health_check_id: "americas-health"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dns-controller
+  namespace: dns-system
+  labels:
+    app: dns-controller
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: dns-controller
+  template:
+    metadata:
+      labels:
+        app: dns-controller
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      serviceAccountName: dns-controller
+      containers:
+      - name: dns-controller
+        image: ghcr.io/mpc-transformer/dns-controller:v1.0.0
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: CLOUDFLARE_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: dns-credentials
+              key: cloudflare-api-token
+        - name: ROUTE53_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: dns-credentials
+              key: route53-access-key
+        - name: ROUTE53_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: dns-credentials
+              key: route53-secret-key
+        volumeMounts:
+        - name: dns-config
+          mountPath: /etc/dns-controller
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: dns-config
+        configMap:
+          name: global-dns-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dns-controller
+  namespace: dns-system
+  labels:
+    app: dns-controller
+spec:
+  selector:
+    app: dns-controller
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dns-controller
+  namespace: dns-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dns-controller
+rules:
+- apiGroups: [""]
+  resources: ["services", "endpoints", "configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dns-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dns-controller
+subjects:
+- kind: ServiceAccount
+  name: dns-controller
+  namespace: dns-system

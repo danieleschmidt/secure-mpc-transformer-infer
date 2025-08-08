@@ -361,3 +361,65 @@ class SecurityValidator:
                                 "Polynomial modulus degree must be a power of 2")
         
         return True
+
+
+class NetworkValidator:
+    """Validator for network and communication parameters."""
+    
+    @staticmethod
+    def validate_party_config(party_config: Dict[str, Any]) -> List[ValidationError]:
+        """Validate multi-party configuration."""
+        errors = []
+        
+        required_fields = ["party_id", "num_parties", "endpoints"]
+        for field in required_fields:
+            if field not in party_config:
+                errors.append(ValidationError(
+                    field=field,
+                    value=None,
+                    error_type="missing_field",
+                    message=f"Required field {field} missing from party config",
+                    severity="critical"
+                ))
+        
+        if "endpoints" in party_config:
+            endpoints = party_config["endpoints"]
+            if not isinstance(endpoints, list):
+                errors.append(ValidationError(
+                    field="endpoints",
+                    value=endpoints,
+                    error_type="type_error",
+                    message="Endpoints must be list",
+                    severity="critical"
+                ))
+            else:
+                for i, endpoint in enumerate(endpoints):
+                    if not isinstance(endpoint, str):
+                        errors.append(ValidationError(
+                            field=f"endpoints[{i}]",
+                            value=endpoint,
+                            error_type="type_error",
+                            message="Endpoint must be string",
+                            severity="error"
+                        ))
+                    elif not NetworkValidator.is_valid_endpoint(endpoint):
+                        errors.append(ValidationError(
+                            field=f"endpoints[{i}]",
+                            value=endpoint,
+                            error_type="format_error",
+                            message=f"Invalid endpoint format: {endpoint}",
+                            severity="error"
+                        ))
+        
+        return errors
+    
+    @staticmethod
+    def is_valid_endpoint(endpoint: str) -> bool:
+        """Check if endpoint has valid format."""
+        # Simple validation for host:port format
+        pattern = r'^[a-zA-Z0-9.-]+:\d{1,5}$'
+        return re.match(pattern, endpoint) is not None
+
+
+# Global validator instance
+default_validator = InputValidator()

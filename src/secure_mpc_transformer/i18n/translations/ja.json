@@ -1,0 +1,221 @@
+{
+  "app": {
+    "name": "セキュアMPCトランスフォーマー",
+    "description": "GPU加速されたTransformer推論のためのセキュアマルチパーティ計算",
+    "version": "v0.2.0"
+  },
+  "ui": {
+    "buttons": {
+      "submit": "送信",
+      "cancel": "キャンセル",
+      "save": "保存",
+      "delete": "削除",
+      "edit": "編集",
+      "view": "表示",
+      "download": "ダウンロード",
+      "upload": "アップロード",
+      "refresh": "更新",
+      "close": "閉じる",
+      "back": "戻る",
+      "next": "次へ",
+      "previous": "前へ",
+      "continue": "続行",
+      "reset": "リセット"
+    },
+    "labels": {
+      "name": "名前",
+      "email": "メール",
+      "password": "パスワード",
+      "username": "ユーザー名",
+      "search": "検索",
+      "filter": "フィルター",
+      "sort": "並び替え",
+      "date": "日付",
+      "time": "時刻",
+      "status": "ステータス",
+      "type": "タイプ",
+      "size": "サイズ",
+      "description": "説明",
+      "language": "言語",
+      "region": "地域",
+      "timezone": "タイムゾーン"
+    },
+    "messages": {
+      "loading": "読み込み中...",
+      "saving": "保存中...",
+      "success": "操作が正常に完了しました",
+      "error": "エラーが発生しました",
+      "warning": "警告",
+      "info": "情報",
+      "no_data": "利用可能なデータがありません",
+      "no_results": "結果が見つかりませんでした",
+      "confirm_delete": "この項目を削除してもよろしいですか？",
+      "unsaved_changes": "保存されていない変更があります。終了してもよろしいですか？"
+    }
+  },
+  "mpc": {
+    "protocols": {
+      "semi_honest_3pc": "セミオネスト3者計算",
+      "aby3": "ABY3プロトコル",
+      "malicious_3pc": "悪意のある3者計算"
+    },
+    "status": {
+      "initializing": "MPCプロトコルを初期化中...",
+      "waiting_peers": "ピア接続を待機中...",
+      "connected": "{count}個のピアに接続しました",
+      "computing": "セキュア計算を実行中...",
+      "completed": "計算が正常に完了しました",
+      "failed": "計算が失敗しました: {error}",
+      "timeout": "計算がタイムアウトしました"
+    },
+    "errors": {
+      "peer_connection_failed": "ピア {peer_id} への接続に失敗しました",
+      "invalid_protocol": "無効なMPCプロトコル: {protocol}",
+      "insufficient_peers": "計算に十分なピアがありません（必要: {required}、現在: {actual}）",
+      "computation_error": "セキュア計算中のエラー: {details}",
+      "network_error": "ネットワーク通信エラー: {error}",
+      "timeout": "操作が{seconds}秒後にタイムアウトしました"
+    }
+  },
+  "inference": {
+    "models": {
+      "bert_base": "BERT Base",
+      "bert_large": "BERT Large",
+      "roberta_base": "RoBERTa Base",
+      "distilbert": "DistilBERT",
+      "gpt2": "GPT-2"
+    },
+    "status": {
+      "loading_model": "モデル {model_name} を読み込み中...",
+      "model_loaded": "モデルが正常に読み込まれました",
+      "tokenizing": "入力テキストをトークン化中...",
+      "processing": "推論リクエストを処理中...",
+      "generating": "予測を生成中...",
+      "complete": "推論が{time}msで完了しました"
+    },
+    "errors": {
+      "model_not_found": "モデル '{model}' が見つかりません",
+      "invalid_input": "無効な入力形式",
+      "tokenization_failed": "入力テキストのトークン化に失敗しました",
+      "inference_failed": "推論に失敗しました: {error}",
+      "gpu_error": "GPU計算エラー: {details}",
+      "memory_error": "モデルに対してメモリが不足しています"
+    },
+    "results": {
+      "confidence": "信頼度: {score}%",
+      "latency": "処理時間: {ms}ms",
+      "tokens_processed": "処理トークン数: {count}",
+      "gpu_utilization": "GPU使用率: {percent}%"
+    }
+  },
+  "security": {
+    "authentication": {
+      "login": "ログイン",
+      "logout": "ログアウト",
+      "register": "アカウント作成",
+      "forgot_password": "パスワードを忘れた場合",
+      "reset_password": "パスワードリセット",
+      "change_password": "パスワード変更",
+      "two_factor": "二要素認証",
+      "verify_code": "コード確認"
+    },
+    "authorization": {
+      "access_denied": "アクセス拒否",
+      "insufficient_permissions": "この操作を実行する権限がありません",
+      "session_expired": "セッションが期限切れです。再度ログインしてください",
+      "account_locked": "ログイン試行の失敗によりアカウントが一時的にロックされています"
+    },
+    "compliance": {
+      "gdpr": {
+        "title": "GDPR準拠",
+        "consent_required": "データ処理にはお客様の同意が必要です",
+        "data_processing": "データ処理情報",
+        "your_rights": "お客様の権利",
+        "contact_dpo": "データ保護責任者への連絡"
+      },
+      "ccpa": {
+        "title": "カリフォルニア州消費者プライバシー法",
+        "do_not_sell": "個人情報の販売を禁止",
+        "request_deletion": "個人情報の削除を要求",
+        "know_about_data": "お客様の個人情報について"
+      }
+    }
+  },
+  "monitoring": {
+    "metrics": {
+      "uptime": "稼働時間",
+      "cpu_usage": "CPU使用率",
+      "memory_usage": "メモリ使用量",
+      "gpu_usage": "GPU使用率",
+      "network_io": "ネットワークI/O",
+      "disk_usage": "ディスク使用量",
+      "request_rate": "リクエスト率",
+      "error_rate": "エラー率",
+      "response_time": "応答時間"
+    },
+    "alerts": {
+      "high_cpu": "高いCPU使用率が検出されました",
+      "high_memory": "高いメモリ使用量が検出されました",
+      "low_disk_space": "ディスク容量不足の警告",
+      "service_down": "サービスがダウンしています",
+      "security_incident": "セキュリティインシデントが検出されました",
+      "performance_degraded": "パフォーマンス低下が検出されました"
+    }
+  },
+  "errors": {
+    "validation": {
+      "required": "この項目は必須です",
+      "invalid_email": "有効なメールアドレスを入力してください",
+      "invalid_format": "無効な形式です",
+      "too_short": "最低{min}文字必要です",
+      "too_long": "最大{max}文字までです",
+      "invalid_number": "有効な数値を入力してください",
+      "invalid_date": "有効な日付を入力してください",
+      "passwords_dont_match": "パスワードが一致しません"
+    },
+    "network": {
+      "connection_failed": "接続に失敗しました",
+      "timeout": "リクエストタイムアウト",
+      "server_error": "サーバーエラーが発生しました",
+      "not_found": "リソースが見つかりません",
+      "forbidden": "アクセス禁止",
+      "unauthorized": "認証されていないアクセス"
+    },
+    "system": {
+      "internal_error": "内部システムエラー",
+      "service_unavailable": "サービスが一時的に利用できません",
+      "maintenance": "システムはメンテナンス中です",
+      "rate_limited": "リクエスト数が多すぎます。後でもう一度お試しください"
+    }
+  },
+  "date": {
+    "formats": {
+      "short": "yyyy/MM/dd",
+      "medium": "yyyy年M月d日",
+      "long": "yyyy年M月d日",
+      "full": "yyyy年M月d日 EEEE"
+    },
+    "relative": {
+      "now": "今",
+      "seconds_ago": "{count}秒前",
+      "minute_ago": "1分前",
+      "minutes_ago": "{count}分前",
+      "hour_ago": "1時間前",
+      "hours_ago": "{count}時間前",
+      "day_ago": "昨日",
+      "days_ago": "{count}日前",
+      "week_ago": "1週間前",
+      "weeks_ago": "{count}週間前",
+      "month_ago": "1ヶ月前",
+      "months_ago": "{count}ヶ月前",
+      "year_ago": "1年前",
+      "years_ago": "{count}年前"
+    }
+  },
+  "numbers": {
+    "decimal_separator": ".",
+    "thousands_separator": ",",
+    "currency_symbol": "¥",
+    "currency_position": "before"
+  }
+}

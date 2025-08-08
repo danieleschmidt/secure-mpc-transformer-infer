@@ -1,0 +1,47 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "workers": 1,
+    "reload": false,
+    "log_level": "info"
+  },
+  "security": {
+    "protocol_name": "aby3",
+    "party_id": 0,
+    "num_parties": 3,
+    "security_level": 128,
+    "gpu_acceleration": true
+  },
+  "security_service": {
+    "enable_threat_detection": true,
+    "enable_audit_logging": true,
+    "enable_privacy_accounting": true,
+    "privacy_epsilon_budget": 1.0,
+    "privacy_delta": 1e-5
+  },
+  "model_service": {
+    "max_cached_models": 3,
+    "max_cache_memory_mb": 8000,
+    "max_concurrent_loads": 2,
+    "auto_unload_timeout": 1800,
+    "preload_models": [
+      {
+        "model_name": "bert-base-uncased",
+        "protocol_config": {}
+      }
+    ]
+  },
+  "inference_service": {
+    "max_batch_size": 16,
+    "default_timeout": 300,
+    "enable_caching": true
+  },
+  "cors": {
+    "allow_origins": ["*"],
+    "allow_credentials": true,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"]
+  },
+  "default_model": "bert-base-uncased"
+}

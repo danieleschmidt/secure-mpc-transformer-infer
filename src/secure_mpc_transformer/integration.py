@@ -191,23 +191,44 @@ class QuantumMPCIntegrator:
     
     async def _simulate_inference_result(self, text_input: str) -> Dict[str, Any]:
         """
-        Simulate inference result (placeholder for actual MPC computation).
-        
-        In a real implementation, this would integrate with the secure
-        transformer's inference methods.
+        Perform actual secure inference using the transformer and MPC protocols.
         """
-        # Simulate processing time
-        await asyncio.sleep(0.01)
+        if not self.transformer:
+            raise RuntimeError("Transformer not initialized")
         
-        # Mock result based on input
-        return {
-            "processed_text": f"Processed: {text_input}",
-            "embeddings_shape": [1, len(text_input.split()), 768],
-            "attention_weights": "encrypted",
-            "final_output": f"MPC_RESULT({hash(text_input) % 10000})",
-            "confidence": 0.95,
-            "processing_time": 0.01
-        }
+        start_time = datetime.now()
+        
+        try:
+            # Use the actual secure transformer for inference
+            result = self.transformer.predict_secure(text_input)
+            
+            processing_time = (datetime.now() - start_time).total_seconds()
+            
+            # Extract relevant information from secure computation
+            return {
+                "processed_text": f"Securely processed: {len(text_input)} characters",
+                "embeddings_shape": list(result["input_shape"]),
+                "output_shape": list(result["output_shape"]),
+                "secure_computation_info": result["protocol_info"],
+                "latency_ms": result["latency_ms"],
+                "processing_time": processing_time,
+                "security_level": self.security_config.security_level,
+                "protocol_used": self.security_config.protocol_name
+            }
+            
+        except Exception as e:
+            # Fall back to simulation if secure inference fails
+            logger.warning(f"Secure inference failed, using simulation: {e}")
+            
+            processing_time = (datetime.now() - start_time).total_seconds()
+            return {
+                "processed_text": f"Simulated processing: {text_input[:50]}...",
+                "embeddings_shape": [1, min(len(text_input.split()), 512), 768],
+                "output_shape": [1, min(len(text_input.split()), 512), 768],
+                "simulation_mode": True,
+                "processing_time": processing_time,
+                "error": str(e)
+            }
     
     def batch_inference(self, 
                        text_batches: List[List[str]],

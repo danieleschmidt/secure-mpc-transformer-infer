@@ -146,8 +146,14 @@ class SecureTransformer(nn.Module):
         config = TransformerConfig.from_pretrained(model_name, **kwargs)
         model = cls(config)
         
-        # In practice, would load and convert pre-trained weights
-        logger.info(f"Initialized secure transformer: {model_name}")
+        # Load and convert pre-trained weights
+        try:
+            weights_dict = model._load_pretrained_weights(model_name)
+            model._convert_weights_to_secure(weights_dict)
+            logger.info(f"Loaded pretrained weights for {model_name} ({len(weights_dict)} tensors)")
+        except Exception as e:
+            logger.warning(f"Could not load pretrained weights for {model_name}: {e}")
+            logger.info("Using randomly initialized weights")
         
         return model
     
@@ -226,3 +232,134 @@ class SecureTransformer(nn.Module):
         super().to(device)
         self.device = device
         return self
+    
+    def _load_pretrained_weights(self, model_name: str) -> Dict[str, torch.Tensor]:
+        """Load pretrained model weights."""
+        try:
+            # Try to load from HuggingFace transformers first
+            from transformers import AutoModel
+            pretrained_model = AutoModel.from_pretrained(model_name)
+            state_dict = pretrained_model.state_dict()
+            
+            # Filter weights that match our architecture
+            filtered_weights = {}
+            
+            # Map common weight names to our secure model structure
+            weight_mapping = {
+                # Embeddings
+                "embeddings.word_embeddings.weight": "embeddings.word_embeddings.weight",
+                "embeddings.position_embeddings.weight": "embeddings.position_embeddings.weight", 
+                "embeddings.token_type_embeddings.weight": "embeddings.token_type_embeddings.weight",
+                "embeddings.LayerNorm.weight": "embeddings.layer_norm.weight",
+                "embeddings.LayerNorm.bias": "embeddings.layer_norm.bias",
+            }
+            
+            # Add transformer layer mappings
+            for i in range(self.config.num_hidden_layers):
+                layer_prefix = f"encoder.layer.{i}"
+                our_prefix = f"layers.{i}"
+                
+                weight_mapping.update({
+                    f"{layer_prefix}.attention.self.query.weight": f"{our_prefix}.attention.query.weight",
+                    f"{layer_prefix}.attention.self.query.bias": f"{our_prefix}.attention.query.bias",
+                    f"{layer_prefix}.attention.self.key.weight": f"{our_prefix}.attention.key.weight", 
+                    f"{layer_prefix}.attention.self.key.bias": f"{our_prefix}.attention.key.bias",
+                    f"{layer_prefix}.attention.self.value.weight": f"{our_prefix}.attention.value.weight",
+                    f"{layer_prefix}.attention.self.value.bias": f"{our_prefix}.attention.value.bias",
+                    f"{layer_prefix}.attention.output.dense.weight": f"{our_prefix}.attention.output.weight",
+                    f"{layer_prefix}.attention.output.dense.bias": f"{our_prefix}.attention.output.bias",
+                    f"{layer_prefix}.attention.output.LayerNorm.weight": f"{our_prefix}.attention_norm.weight",
+                    f"{layer_prefix}.attention.output.LayerNorm.bias": f"{our_prefix}.attention_norm.bias",
+                    f"{layer_prefix}.intermediate.dense.weight": f"{our_prefix}.feed_forward.intermediate.weight",
+                    f"{layer_prefix}.intermediate.dense.bias": f"{our_prefix}.feed_forward.intermediate.bias",
+                    f"{layer_prefix}.output.dense.weight": f"{our_prefix}.feed_forward.output.weight",
+                    f"{layer_prefix}.output.dense.bias": f"{our_prefix}.feed_forward.output.bias", 
+                    f"{layer_prefix}.output.LayerNorm.weight": f"{our_prefix}.output_norm.weight",
+                    f"{layer_prefix}.output.LayerNorm.bias": f"{our_prefix}.output_norm.bias",
+                })
+            
+            # Extract matching weights
+            for pretrained_name, tensor in state_dict.items():
+                if pretrained_name in weight_mapping:
+                    our_name = weight_mapping[pretrained_name]
+                    filtered_weights[our_name] = tensor.clone()
+            
+            logger.info(f"Mapped {len(filtered_weights)} weight tensors from {model_name}")
+            return filtered_weights
+            
+        except ImportError:
+            logger.warning("transformers library not available, cannot load pretrained weights")
+            return {}
+        except Exception as e:
+            logger.error(f"Failed to load pretrained weights: {e}")
+            return {}
+    
+    def _convert_weights_to_secure(self, weights_dict: Dict[str, torch.Tensor]):
+        """Convert loaded weights to secure shared format."""
+        if not weights_dict:
+            return
+            
+        # Load weights into the model and then convert to secure format
+        missing_keys = []
+        unexpected_keys = []
+        
+        model_state = self.state_dict()
+        
+        for name, tensor in weights_dict.items():
+            if name in model_state:
+                # Check shape compatibility
+                if tensor.shape == model_state[name].shape:
+                    model_state[name].copy_(tensor)
+                else:
+                    logger.warning(f"Shape mismatch for {name}: {tensor.shape} vs {model_state[name].shape}")
+                    missing_keys.append(name)
+            else:
+                unexpected_keys.append(name)
+        
+        # Find missing keys
+        for name in model_state:
+            if name not in weights_dict:
+                missing_keys.append(name)
+        
+        if missing_keys:
+            logger.info(f"Missing keys: {missing_keys}")
+        if unexpected_keys:
+            logger.info(f"Unexpected keys: {unexpected_keys}")
+        
+        # Load the updated state dict
+        self.load_state_dict(model_state)
+        
+        # For secure MPC, we would normally convert these weights to secret shares
+        # For now, we keep them as plaintext since the sharing happens during inference
+        logger.info("Weights loaded and ready for secure computation")
+    
+    def save_secure_checkpoint(self, checkpoint_path: str):
+        """Save secure model checkpoint."""
+        import os
+        os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+        
+        checkpoint = {
+            "config": self.config.__dict__,
+            "model_state_dict": self.state_dict(),
+            "protocol_info": self.protocol.get_protocol_info() if hasattr(self.protocol, 'get_protocol_info') else {}
+        }
+        
+        torch.save(checkpoint, checkpoint_path)
+        logger.info(f"Secure checkpoint saved to {checkpoint_path}")
+    
+    @classmethod 
+    def load_secure_checkpoint(cls, checkpoint_path: str, **kwargs) -> "SecureTransformer":
+        """Load secure model from checkpoint."""
+        checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        
+        # Merge config from checkpoint with any overrides
+        config_dict = checkpoint["config"]
+        config_dict.update(kwargs)
+        config = TransformerConfig(**config_dict)
+        
+        # Create model and load weights
+        model = cls(config)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        
+        logger.info(f"Secure model loaded from checkpoint: {checkpoint_path}")
+        return model

@@ -1,0 +1,214 @@
+# Multi-architecture Dockerfile for Secure MPC Transformer
+# Supports: linux/amd64, linux/arm64, linux/arm/v7, windows/amd64
+
+# Build arguments for multi-architecture support
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
+
+# Base image selection based on architecture
+FROM --platform=$BUILDPLATFORM python:3.10-slim as base-amd64
+FROM --platform=$BUILDPLATFORM python:3.10-slim as base-arm64
+FROM --platform=$BUILDPLATFORM python:3.10-slim as base-armv7
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/windows/servercore:ltsc2022 as base-windows
+
+# Select base image based on target platform
+FROM base-${TARGETARCH}${TARGETVARIANT} as base
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    PATH="/opt/app/.local/bin:$PATH" \
+    PYTHONPATH="/opt/app/src"
+
+# Set platform-specific variables
+ARG TARGETARCH
+ENV TARGETARCH=${TARGETARCH}
+
+# Install system dependencies based on architecture
+RUN if [ "$TARGETOS" = "linux" ]; then \
+        apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        git \
+        libssl-dev \
+        libffi-dev \
+        libprotobuf-dev \
+        protobuf-compiler \
+        pkg-config \
+        && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# Install CUDA support for GPU architectures (amd64 only)
+RUN if [ "$TARGETARCH" = "amd64" ] && [ "$TARGETOS" = "linux" ]; then \
+        curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb -o cuda-keyring.deb && \
+        dpkg -i cuda-keyring.deb && \
+        apt-get update && apt-get install -y --no-install-recommends \
+        cuda-toolkit-12-2 \
+        libcudnn8 \
+        libcudnn8-dev \
+        && rm -rf /var/lib/apt/lists/* cuda-keyring.deb; \
+    fi
+
+# Create non-root user
+RUN if [ "$TARGETOS" = "linux" ]; then \
+        groupadd -r appuser && useradd -r -g appuser -u 1000 appuser && \
+        mkdir -p /opt/app && chown -R appuser:appuser /opt/app; \
+    fi
+
+# Set working directory
+WORKDIR /opt/app
+
+# Copy requirements and install Python dependencies
+COPY --chown=1000:1000 requirements*.txt ./
+
+# Install Python dependencies with architecture-specific optimizations
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    if [ "$TARGETARCH" = "amd64" ]; then \
+        pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+        pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; \
+    else \
+        pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; \
+    fi
+
+# Install additional dependencies
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements-prod.txt
+
+# Copy application code
+COPY --chown=1000:1000 src/ ./src/
+COPY --chown=1000:1000 scripts/ ./scripts/
+COPY --chown=1000:1000 config/ ./config/
+COPY --chown=1000:1000 pyproject.toml ./
+
+# Install the application
+RUN pip install --no-cache-dir -e .
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /opt/app/{logs,data,certs,temp} && \
+    if [ "$TARGETOS" = "linux" ]; then \
+        chown -R appuser:appuser /opt/app; \
+    fi
+
+# Copy platform-specific binaries and libraries
+COPY --chown=1000:1000 docker/platform-binaries/${TARGETARCH}/ ./bin/
+
+# Health check script
+COPY --chown=1000:1000 docker/healthcheck.sh ./
+RUN if [ "$TARGETOS" = "linux" ]; then chmod +x healthcheck.sh; fi
+
+# Switch to non-root user (Linux only)
+USER 1000
+
+# Expose ports
+EXPOSE 8080 50051 9090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ./healthcheck.sh
+
+# Default command
+CMD ["python", "-m", "secure_mpc_transformer.server"]
+
+# ======================================
+# Multi-stage builds for different variants
+# ======================================
+
+# CPU-only variant
+FROM base as cpu-variant
+ENV MPC_GPU_ENABLED=false
+ENV CUDA_VISIBLE_DEVICES=""
+RUN pip uninstall -y cupy-cuda12x nvidia-ml-py || true
+
+# GPU variant (amd64 only)  
+FROM base as gpu-variant
+ENV MPC_GPU_ENABLED=true
+RUN if [ "$TARGETARCH" != "amd64" ]; then \
+        echo "ERROR: GPU variant only supported on amd64" && exit 1; \
+    fi
+
+# Production variant with minimal dependencies
+FROM base as prod-variant
+RUN pip install --no-cache-dir gunicorn uvicorn[standard] && \
+    pip uninstall -y pytest pytest-cov black mypy || true && \
+    find /usr/local -name "*.pyc" -delete && \
+    find /usr/local -name "__pycache__" -type d -exec rm -rf {} + || true
+
+# Development variant with additional tools
+FROM base as dev-variant
+COPY --chown=1000:1000 requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
+ENV MPC_DEBUG=true
+
+# ======================================
+# Platform-specific final stages
+# ======================================
+
+# Linux variants
+FROM ${VARIANT:-prod}-variant as linux-final
+LABEL maintainer="MPC Transformer Team <team@mpc-transformer.com>"
+LABEL org.opencontainers.image.title="Secure MPC Transformer"
+LABEL org.opencontainers.image.description="GPU-accelerated secure multi-party computation for transformer inference"
+LABEL org.opencontainers.image.version="0.2.0"
+LABEL org.opencontainers.image.architecture="${TARGETARCH}"
+LABEL org.opencontainers.image.os="${TARGETOS}"
+
+# Windows variant (separate build due to different base)
+FROM mcr.microsoft.com/windows/servercore:ltsc2022 as windows-base
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
+
+# Install Python on Windows
+RUN Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe' -OutFile 'python-installer.exe'; \
+    Start-Process -FilePath 'python-installer.exe' -ArgumentList '/quiet', 'InstallAllUsers=1', 'PrependPath=1' -Wait; \
+    Remove-Item 'python-installer.exe'
+
+# Set Windows environment
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PATH="C:\Program Files\Python310;C:\Program Files\Python310\Scripts;${PATH}"
+
+WORKDIR C:\app
+
+# Copy and install Python dependencies  
+COPY requirements.txt requirements-prod.txt ./
+RUN python -m pip install --upgrade pip setuptools wheel; \
+    python -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; \
+    python -m pip install --no-cache-dir -r requirements.txt; \
+    python -m pip install --no-cache-dir -r requirements-prod.txt
+
+# Copy application code
+COPY src/ ./src/
+COPY scripts/ ./scripts/
+COPY config/ ./config/
+COPY pyproject.toml ./
+
+# Install application
+RUN python -m pip install --no-cache-dir -e .
+
+# Create directories
+RUN New-Item -ItemType Directory -Path C:\app\logs, C:\app\data, C:\app\certs, C:\app\temp -Force
+
+EXPOSE 8080 50051 9090
+
+# Windows health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD powershell -Command "try { Invoke-RestMethod -Uri http://localhost:8080/health -TimeoutSec 5 } catch { exit 1 }"
+
+CMD ["python", "-m", "secure_mpc_transformer.server"]
+
+FROM windows-base as windows-final
+LABEL maintainer="MPC Transformer Team <team@mpc-transformer.com>"
+LABEL org.opencontainers.image.title="Secure MPC Transformer"  
+LABEL org.opencontainers.image.description="GPU-accelerated secure multi-party computation for transformer inference"
+LABEL org.opencontainers.image.version="0.2.0"
+LABEL org.opencontainers.image.architecture="amd64"
+LABEL org.opencontainers.image.os="windows"
+
+# Final stage selection based on OS
+FROM ${TARGETOS}-final as final

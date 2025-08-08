@@ -273,6 +273,27 @@ class SecurityAuditor:
             "blocked_ips": list(self.blocked_ips),
             "active_threats": len([e for e in recent_events if not e.resolved])
         }
+    
+    async def get_recent_logs(self, hours: int = 24) -> List[SecurityEvent]:
+        """Get recent security events."""
+        cutoff_time = time.time() - (hours * 3600)
+        return [e for e in self.audit_log if e.timestamp > cutoff_time]
+    
+    async def get_by_risk_level(self, risk_level: str) -> List[SecurityEvent]:
+        """Get events by risk level (mapped from severity)."""
+        # Map severity levels to risk levels for API compatibility
+        severity_map = {"LOW": "low", "MEDIUM": "medium", "HIGH": "high", "CRITICAL": "critical"}
+        target_severity = None
+        
+        for sev, risk in severity_map.items():
+            if risk == risk_level.lower():
+                target_severity = sev
+                break
+        
+        if target_severity:
+            return [e for e in self.audit_log if e.severity == target_severity]
+        else:
+            return []
 
 
 class PrivacyAccountant:

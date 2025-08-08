@@ -1,0 +1,298 @@
+# Global Istio Gateway Configuration for Multi-Region Load Balancing
+
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: mpc-transformer-global-gateway
+  namespace: istio-system
+  labels:
+    app: mpc-transformer
+    tier: global-routing
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  # HTTPS traffic for all regions
+  - port:
+      number: 443
+      name: https-global
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: mpc-transformer-global-tls
+    hosts:
+    - "*.mpc-transformer.com"
+    - "*.mpc-transformer.eu"
+    - "*.mpc-transformer.asia"
+    - "api.mpc-transformer.com"
+    - "eu.mpc-transformer.com"
+    - "asia.mpc-transformer.com"
+  
+  # HTTP redirect to HTTPS
+  - port:
+      number: 80
+      name: http-redirect
+      protocol: HTTP
+    hosts:
+    - "*"
+    tls:
+      httpsRedirect: true
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: mpc-transformer-global-routing
+  namespace: istio-system
+  labels:
+    app: mpc-transformer
+    tier: global-routing
+spec:
+  hosts:
+  - "*.mpc-transformer.com"
+  - "*.mpc-transformer.eu" 
+  - "*.mpc-transformer.asia"
+  gateways:
+  - mpc-transformer-global-gateway
+  http:
+  # Region-based routing with failover
+  - match:
+    - headers:
+        "cf-ipcountry":
+          regex: "US|CA|MX|BR|AR|CL|CO|PE"
+    route:
+    - destination:
+        host: mpc-transformer.mpc-transformer-americas.svc.cluster.local
+        port:
+          number: 8080
+        subset: primary
+      weight: 80
+    - destination:
+        host: mpc-transformer.mpc-transformer-americas.svc.cluster.local
+        port:
+          number: 8080
+        subset: secondary
+      weight: 20
+    fault:
+      delay:
+        percentage:
+          value: 0.1
+        fixedDelay: 5s
+    retries:
+      attempts: 3
+      perTryTimeout: 30s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+      
+  # Europe region routing
+  - match:
+    - headers:
+        "cf-ipcountry":
+          regex: "GB|DE|FR|ES|IT|NL|SE|NO|DK|FI|IE|AT|CH|BE|PT"
+    route:
+    - destination:
+        host: mpc-transformer.mpc-transformer-europe.svc.cluster.local
+        port:
+          number: 8080
+        subset: primary
+      weight: 80
+    - destination:
+        host: mpc-transformer.mpc-transformer-europe.svc.cluster.local
+        port:
+          number: 8080
+        subset: secondary
+      weight: 20
+    fault:
+      delay:
+        percentage:
+          value: 0.1
+        fixedDelay: 5s
+    retries:
+      attempts: 3
+      perTryTimeout: 30s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+      
+  # APAC region routing
+  - match:
+    - headers:
+        "cf-ipcountry":
+          regex: "JP|SG|AU|IN|KR|TH|MY|ID|PH|VN|TW|HK"
+    route:
+    - destination:
+        host: mpc-transformer.mpc-transformer-apac.svc.cluster.local
+        port:
+          number: 8080
+        subset: primary
+      weight: 80
+    - destination:
+        host: mpc-transformer.mpc-transformer-apac.svc.cluster.local
+        port:
+          number: 8080
+        subset: secondary
+      weight: 20
+    fault:
+      delay:
+        percentage:
+          value: 0.1
+        fixedDelay: 5s
+    retries:
+      attempts: 3
+      perTryTimeout: 30s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+  
+  # Default routing (Americas) for unmatched traffic
+  - route:
+    - destination:
+        host: mpc-transformer.mpc-transformer-americas.svc.cluster.local
+        port:
+          number: 8080
+        subset: primary
+      weight: 100
+    retries:
+      attempts: 3
+      perTryTimeout: 30s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: mpc-transformer-global-destinations
+  namespace: istio-system
+  labels:
+    app: mpc-transformer
+    tier: global-routing
+spec:
+  host: "*.local"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 30s
+        keepAlive:
+          time: 7200s
+          interval: 75s
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 10
+        maxRetries: 3
+        idleTimeout: 300s
+        h2UpgradePolicy: UPGRADE
+    loadBalancer:
+      simple: LEAST_CONN
+      consistentHash:
+        httpHeaderName: "X-User-ID"
+    circuitBreaker:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 30
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 30
+  
+  # Americas region subsets
+  subsets:
+  - name: americas-primary
+    labels:
+      region: americas
+      tier: primary
+    trafficPolicy:
+      tls:
+        mode: ISTIO_MUTUAL
+  - name: americas-secondary
+    labels:
+      region: americas
+      tier: secondary
+    trafficPolicy:
+      tls:
+        mode: ISTIO_MUTUAL
+        
+  # Europe region subsets
+  - name: europe-primary
+    labels:
+      region: europe
+      tier: primary
+    trafficPolicy:
+      tls:
+        mode: ISTIO_MUTUAL
+  - name: europe-secondary
+    labels:
+      region: europe
+      tier: secondary
+    trafficPolicy:
+      tls:
+        mode: ISTIO_MUTUAL
+        
+  # APAC region subsets
+  - name: apac-primary
+    labels:
+      region: apac
+      tier: primary
+    trafficPolicy:
+      tls:
+        mode: ISTIO_MUTUAL
+  - name: apac-secondary
+    labels:
+      region: apac
+      tier: secondary
+    trafficPolicy:
+      tls:
+        mode: ISTIO_MUTUAL
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-dns-resolution
+  namespace: istio-system
+spec:
+  hosts:
+  - "dns.google"
+  - "cloudflare-dns.com"
+  ports:
+  - number: 53
+    name: dns-udp
+    protocol: UDP
+  - number: 853
+    name: dns-tls
+    protocol: TCP
+  location: MESH_EXTERNAL
+  resolution: DNS
+
+---
+# Global fault injection and chaos testing
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: mpc-transformer-fault-injection
+  namespace: istio-system
+  labels:
+    app: mpc-transformer
+    tier: chaos-engineering
+spec:
+  hosts:
+  - "chaos.mpc-transformer.com"
+  gateways:
+  - mpc-transformer-global-gateway
+  http:
+  - fault:
+      delay:
+        percentage:
+          value: 10
+        fixedDelay: 5s
+      abort:
+        percentage:
+          value: 1
+        httpStatus: 503
+    route:
+    - destination:
+        host: mpc-transformer.mpc-transformer-americas.svc.cluster.local
+        port:
+          number: 8080
