@@ -1,0 +1,221 @@
+{
+  "app": {
+    "name": "Transformador MPC Seguro",
+    "description": "Computación segura multi-party acelerada por GPU para inferencia de transformadores",
+    "version": "v0.2.0"
+  },
+  "ui": {
+    "buttons": {
+      "submit": "Enviar",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "delete": "Eliminar",
+      "edit": "Editar",
+      "view": "Ver",
+      "download": "Descargar",
+      "upload": "Cargar",
+      "refresh": "Actualizar",
+      "close": "Cerrar",
+      "back": "Atrás",
+      "next": "Siguiente",
+      "previous": "Anterior",
+      "continue": "Continuar",
+      "reset": "Restablecer"
+    },
+    "labels": {
+      "name": "Nombre",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "username": "Usuario",
+      "search": "Buscar",
+      "filter": "Filtrar",
+      "sort": "Ordenar",
+      "date": "Fecha",
+      "time": "Hora",
+      "status": "Estado",
+      "type": "Tipo",
+      "size": "Tamaño",
+      "description": "Descripción",
+      "language": "Idioma",
+      "region": "Región",
+      "timezone": "Zona horaria"
+    },
+    "messages": {
+      "loading": "Cargando...",
+      "saving": "Guardando...",
+      "success": "Operación completada exitosamente",
+      "error": "Ocurrió un error",
+      "warning": "Advertencia",
+      "info": "Información",
+      "no_data": "No hay datos disponibles",
+      "no_results": "No se encontraron resultados",
+      "confirm_delete": "¿Estás seguro de que deseas eliminar este elemento?",
+      "unsaved_changes": "Tienes cambios sin guardar. ¿Estás seguro de que deseas salir?"
+    }
+  },
+  "mpc": {
+    "protocols": {
+      "semi_honest_3pc": "Computación 3-Party Semi-honesta",
+      "aby3": "Protocolo ABY3",
+      "malicious_3pc": "Computación 3-Party Maliciosa"
+    },
+    "status": {
+      "initializing": "Inicializando protocolo MPC...",
+      "waiting_peers": "Esperando conexiones de pares...",
+      "connected": "Conectado a {count} pares",
+      "computing": "Realizando computación segura...",
+      "completed": "Computación completada exitosamente",
+      "failed": "Computación falló: {error}",
+      "timeout": "Tiempo de computación agotado"
+    },
+    "errors": {
+      "peer_connection_failed": "Falló la conexión con el par {peer_id}",
+      "invalid_protocol": "Protocolo MPC inválido: {protocol}",
+      "insufficient_peers": "Pares insuficientes para computación (necesita {required}, tiene {actual})",
+      "computation_error": "Error durante computación segura: {details}",
+      "network_error": "Error de comunicación de red: {error}",
+      "timeout": "Operación agotó tiempo después de {seconds} segundos"
+    }
+  },
+  "inference": {
+    "models": {
+      "bert_base": "BERT Base",
+      "bert_large": "BERT Grande",
+      "roberta_base": "RoBERTa Base",
+      "distilbert": "DistilBERT",
+      "gpt2": "GPT-2"
+    },
+    "status": {
+      "loading_model": "Cargando modelo {model_name}...",
+      "model_loaded": "Modelo cargado exitosamente",
+      "tokenizing": "Tokenizando texto de entrada...",
+      "processing": "Procesando solicitud de inferencia...",
+      "generating": "Generando predicciones...",
+      "complete": "Inferencia completada en {time}ms"
+    },
+    "errors": {
+      "model_not_found": "Modelo '{model}' no encontrado",
+      "invalid_input": "Formato de entrada inválido",
+      "tokenization_failed": "Falló la tokenización del texto de entrada",
+      "inference_failed": "Inferencia falló: {error}",
+      "gpu_error": "Error de computación GPU: {details}",
+      "memory_error": "Memoria insuficiente para el modelo"
+    },
+    "results": {
+      "confidence": "Confianza: {score}%",
+      "latency": "Tiempo de procesamiento: {ms}ms",
+      "tokens_processed": "Tokens procesados: {count}",
+      "gpu_utilization": "Utilización GPU: {percent}%"
+    }
+  },
+  "security": {
+    "authentication": {
+      "login": "Iniciar Sesión",
+      "logout": "Cerrar Sesión",
+      "register": "Crear Cuenta",
+      "forgot_password": "¿Olvidaste tu contraseña?",
+      "reset_password": "Restablecer Contraseña",
+      "change_password": "Cambiar Contraseña",
+      "two_factor": "Autenticación de Dos Factores",
+      "verify_code": "Verificar Código"
+    },
+    "authorization": {
+      "access_denied": "Acceso denegado",
+      "insufficient_permissions": "No tienes permisos para realizar esta acción",
+      "session_expired": "Tu sesión ha expirado. Por favor inicia sesión de nuevo",
+      "account_locked": "Cuenta temporalmente bloqueada debido a intentos fallidos de inicio de sesión"
+    },
+    "compliance": {
+      "gdpr": {
+        "title": "Cumplimiento RGPD",
+        "consent_required": "Necesitamos tu consentimiento para procesar tus datos",
+        "data_processing": "Información de Procesamiento de Datos",
+        "your_rights": "Tus Derechos",
+        "contact_dpo": "Contactar al Oficial de Protección de Datos"
+      },
+      "ccpa": {
+        "title": "Ley de Privacidad del Consumidor de California",
+        "do_not_sell": "No Vender Mi Información Personal",
+        "request_deletion": "Solicitar Eliminación de Información Personal",
+        "know_about_data": "Conocer Sobre Tu Información Personal"
+      }
+    }
+  },
+  "monitoring": {
+    "metrics": {
+      "uptime": "Tiempo Activo",
+      "cpu_usage": "Uso de CPU",
+      "memory_usage": "Uso de Memoria",
+      "gpu_usage": "Uso de GPU",
+      "network_io": "E/S de Red",
+      "disk_usage": "Uso de Disco",
+      "request_rate": "Tasa de Solicitudes",
+      "error_rate": "Tasa de Errores",
+      "response_time": "Tiempo de Respuesta"
+    },
+    "alerts": {
+      "high_cpu": "Uso alto de CPU detectado",
+      "high_memory": "Uso alto de memoria detectado",
+      "low_disk_space": "Advertencia de poco espacio en disco",
+      "service_down": "El servicio está caído",
+      "security_incident": "Incidente de seguridad detectado",
+      "performance_degraded": "Degradación de rendimiento detectada"
+    }
+  },
+  "errors": {
+    "validation": {
+      "required": "Este campo es obligatorio",
+      "invalid_email": "Por favor ingresa una dirección de correo válida",
+      "invalid_format": "Formato inválido",
+      "too_short": "Debe tener al menos {min} caracteres",
+      "too_long": "Debe tener no más de {max} caracteres",
+      "invalid_number": "Por favor ingresa un número válido",
+      "invalid_date": "Por favor ingresa una fecha válida",
+      "passwords_dont_match": "Las contraseñas no coinciden"
+    },
+    "network": {
+      "connection_failed": "Conexión falló",
+      "timeout": "Solicitud agotó tiempo",
+      "server_error": "Error del servidor ocurrió",
+      "not_found": "Recurso no encontrado",
+      "forbidden": "Acceso prohibido",
+      "unauthorized": "Acceso no autorizado"
+    },
+    "system": {
+      "internal_error": "Error interno del sistema",
+      "service_unavailable": "Servicio temporalmente no disponible",
+      "maintenance": "El sistema está en mantenimiento",
+      "rate_limited": "Demasiadas solicitudes. Por favor intenta de nuevo más tarde"
+    }
+  },
+  "date": {
+    "formats": {
+      "short": "dd/MM/yyyy",
+      "medium": "d MMM yyyy",
+      "long": "d 'de' MMMM 'de' yyyy",
+      "full": "EEEE, d 'de' MMMM 'de' yyyy"
+    },
+    "relative": {
+      "now": "ahora",
+      "seconds_ago": "hace {count} segundos",
+      "minute_ago": "hace un minuto",
+      "minutes_ago": "hace {count} minutos",
+      "hour_ago": "hace una hora",
+      "hours_ago": "hace {count} horas",
+      "day_ago": "ayer",
+      "days_ago": "hace {count} días",
+      "week_ago": "hace una semana",
+      "weeks_ago": "hace {count} semanas",
+      "month_ago": "hace un mes",
+      "months_ago": "hace {count} meses",
+      "year_ago": "hace un año",
+      "years_ago": "hace {count} años"
+    }
+  },
+  "numbers": {
+    "decimal_separator": ",",
+    "thousands_separator": ".",
+    "currency_symbol": "€",
+    "currency_position": "after"
+  }
+}

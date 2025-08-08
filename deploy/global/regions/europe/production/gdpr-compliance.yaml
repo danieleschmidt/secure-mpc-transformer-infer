@@ -1,0 +1,183 @@
+# GDPR Compliance Configuration for EU Region
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gdpr-compliance-config
+  namespace: mpc-transformer-europe
+  labels:
+    compliance: gdpr
+    region: europe
+data:
+  gdpr-settings.yaml: |
+    gdpr:
+      enabled: true
+      data_controller:
+        name: "MPC Transformer Services EU"
+        contact: "dpo@mpc-transformer.eu"
+        address: "123 Tech Street, Dublin, Ireland"
+        registration: "EU-DPA-2024-001"
+      
+      data_processing:
+        legal_basis: "legitimate_interest"
+        purpose: "secure_mpc_inference"
+        categories:
+          - "technical_data"
+          - "processing_metrics"
+          - "security_logs"
+        retention_period: "2_years"
+        
+      data_subject_rights:
+        access: true
+        rectification: true
+        erasure: true  # Right to be forgotten
+        portability: true
+        restriction: true
+        objection: true
+        
+      consent_management:
+        explicit_consent: true
+        consent_withdrawal: true
+        consent_granularity: "purpose_specific"
+        
+      data_transfers:
+        adequacy_decision: false
+        safeguards: "standard_contractual_clauses"
+        impact_assessment: true
+        
+      breach_notification:
+        authority_hours: 72
+        data_subject_hours: 72
+        severity_threshold: "high"
+        
+      privacy_by_design:
+        data_minimization: true
+        purpose_limitation: true
+        storage_limitation: true
+        accuracy: true
+        
+      audit_logging:
+        enabled: true
+        retention: "6_years"
+        anonymization: true
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gdpr-data-protection-keys
+  namespace: mpc-transformer-europe
+  labels:
+    compliance: gdpr
+    encryption: data-protection
+type: Opaque
+data:
+  # Base64 encoded keys for GDPR data protection
+  data-encryption-key: <base64-encoded-aes-256-key>
+  anonymization-key: <base64-encoded-anonymization-key>
+  pseudonymization-salt: <base64-encoded-salt>
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: gdpr-data-retention-cleanup
+  namespace: mpc-transformer-europe
+  labels:
+    compliance: gdpr
+    task: data-retention
+spec:
+  schedule: "0 2 * * 0"  # Weekly cleanup on Sunday at 2 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            compliance: gdpr
+            task: data-retention
+        spec:
+          restartPolicy: Never
+          serviceAccountName: gdpr-data-processor
+          containers:
+          - name: data-retention-cleanup
+            image: ghcr.io/mpc-transformer/gdpr-tools:v1.0.0
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting GDPR data retention cleanup..."
+              
+              # Cleanup old audit logs (keep 6 years)
+              python3 /opt/gdpr-tools/cleanup_audit_logs.py --older-than-years=6
+              
+              # Anonymize old processing data (after 2 years)
+              python3 /opt/gdpr-tools/anonymize_data.py --older-than-years=2
+              
+              # Clean up expired consent records
+              python3 /opt/gdpr-tools/cleanup_consent.py
+              
+              # Generate compliance report
+              python3 /opt/gdpr-tools/generate_report.py --output=/tmp/gdpr-report.json
+              
+              echo "GDPR cleanup completed successfully"
+            env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: url
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gdpr-data-protection-keys
+                  key: data-encryption-key
+            volumeMounts:
+            - name: cleanup-scripts
+              mountPath: /opt/gdpr-tools
+              readOnly: true
+          volumes:
+          - name: cleanup-scripts
+            configMap:
+              name: gdpr-cleanup-scripts
+              defaultMode: 0755
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gdpr-data-processor
+  namespace: mpc-transformer-europe
+  labels:
+    compliance: gdpr
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gdpr-data-processor
+  namespace: mpc-transformer-europe
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gdpr-data-processor
+  namespace: mpc-transformer-europe
+subjects:
+- kind: ServiceAccount
+  name: gdpr-data-processor
+  namespace: mpc-transformer-europe
+roleRef:
+  kind: Role
+  name: gdpr-data-processor
+  apiGroup: rbac.authorization.k8s.io

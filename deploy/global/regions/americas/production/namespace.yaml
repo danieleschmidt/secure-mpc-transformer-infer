@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mpc-transformer-americas
+  labels:
+    name: mpc-transformer-americas
+    environment: production
+    region: americas
+    compliance.mpc-transformer.com/ccpa: "enabled"
+    compliance.mpc-transformer.com/sox: "enabled"
+    security.mpc-transformer.com/network-policy: "enabled"
+    monitoring.mpc-transformer.com/enabled: "true"
+  annotations:
+    region.mpc-transformer.com/primary-zone: "us-east-1"
+    region.mpc-transformer.com/secondary-zone: "us-west-2"
+    region.mpc-transformer.com/tertiary-zones: "ca-central-1,sa-east-1"
+    compliance.mpc-transformer.com/data-residency: "americas"
+    compliance.mpc-transformer.com/legal-basis: "legitimate-interest"
+    monitoring.mpc-transformer.com/sla-target: "99.99"
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: americas-production-quota
+  namespace: mpc-transformer-americas
+spec:
+  hard:
+    requests.cpu: "200"
+    requests.memory: "400Gi"
+    requests.nvidia.com/gpu: "50"
+    limits.cpu: "400"
+    limits.memory: "800Gi" 
+    limits.nvidia.com/gpu: "100"
+    persistentvolumeclaims: "30"
+    requests.storage: "10Ti"
+    pods: "200"
+    services: "50"
+    secrets: "100"
+    configmaps: "100"
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: americas-production-limits
+  namespace: mpc-transformer-americas
+spec:
+  limits:
+  - type: Pod
+    default:
+      cpu: "2"
+      memory: "4Gi"
+    defaultRequest:
+      cpu: "500m"
+      memory: "1Gi"
+    max:
+      cpu: "16"
+      memory: "64Gi"
+      nvidia.com/gpu: "8"
+    min:
+      cpu: "100m"
+      memory: "256Mi"
+  - type: Container
+    default:
+      cpu: "1"
+      memory: "2Gi"
+    defaultRequest:
+      cpu: "250m"
+      memory: "512Mi"
+    max:
+      cpu: "8"
+      memory: "32Gi"
+      nvidia.com/gpu: "4"
+    min:
+      cpu: "50m"
+      memory: "128Mi"
+  - type: PersistentVolumeClaim
+    max:
+      storage: "1Ti"
+    min:
+      storage: "1Gi"

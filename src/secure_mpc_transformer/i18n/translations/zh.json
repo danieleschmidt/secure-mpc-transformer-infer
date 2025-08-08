@@ -1,0 +1,221 @@
+{
+  "app": {
+    "name": "安全多方计算变换器",
+    "description": "GPU加速的Transformer推理安全多方计算",
+    "version": "v0.2.0"
+  },
+  "ui": {
+    "buttons": {
+      "submit": "提交",
+      "cancel": "取消",
+      "save": "保存",
+      "delete": "删除",
+      "edit": "编辑",
+      "view": "查看",
+      "download": "下载",
+      "upload": "上传",
+      "refresh": "刷新",
+      "close": "关闭",
+      "back": "返回",
+      "next": "下一步",
+      "previous": "上一步",
+      "continue": "继续",
+      "reset": "重置"
+    },
+    "labels": {
+      "name": "名称",
+      "email": "电子邮箱",
+      "password": "密码",
+      "username": "用户名",
+      "search": "搜索",
+      "filter": "过滤",
+      "sort": "排序",
+      "date": "日期",
+      "time": "时间",
+      "status": "状态",
+      "type": "类型",
+      "size": "大小",
+      "description": "描述",
+      "language": "语言",
+      "region": "地区",
+      "timezone": "时区"
+    },
+    "messages": {
+      "loading": "加载中...",
+      "saving": "保存中...",
+      "success": "操作成功完成",
+      "error": "发生错误",
+      "warning": "警告",
+      "info": "信息",
+      "no_data": "无可用数据",
+      "no_results": "未找到结果",
+      "confirm_delete": "确定要删除此项目吗？",
+      "unsaved_changes": "有未保存的更改。确定要离开吗？"
+    }
+  },
+  "mpc": {
+    "protocols": {
+      "semi_honest_3pc": "半诚实三方计算",
+      "aby3": "ABY3协议",
+      "malicious_3pc": "恶意三方计算"
+    },
+    "status": {
+      "initializing": "初始化MPC协议中...",
+      "waiting_peers": "等待节点连接中...",
+      "connected": "已连接到{count}个节点",
+      "computing": "执行安全计算中...",
+      "completed": "计算成功完成",
+      "failed": "计算失败：{error}",
+      "timeout": "计算超时"
+    },
+    "errors": {
+      "peer_connection_failed": "连接到节点{peer_id}失败",
+      "invalid_protocol": "无效的MPC协议：{protocol}",
+      "insufficient_peers": "节点不足（需要{required}个，现有{actual}个）",
+      "computation_error": "安全计算过程中出错：{details}",
+      "network_error": "网络通信错误：{error}",
+      "timeout": "操作在{seconds}秒后超时"
+    }
+  },
+  "inference": {
+    "models": {
+      "bert_base": "BERT Base",
+      "bert_large": "BERT Large",
+      "roberta_base": "RoBERTa Base",
+      "distilbert": "DistilBERT",
+      "gpt2": "GPT-2"
+    },
+    "status": {
+      "loading_model": "加载模型{model_name}中...",
+      "model_loaded": "模型加载成功",
+      "tokenizing": "对输入文本进行分词中...",
+      "processing": "处理推理请求中...",
+      "generating": "生成预测结果中...",
+      "complete": "推理在{time}ms内完成"
+    },
+    "errors": {
+      "model_not_found": "未找到模型'{model}'",
+      "invalid_input": "输入格式无效",
+      "tokenization_failed": "输入文本分词失败",
+      "inference_failed": "推理失败：{error}",
+      "gpu_error": "GPU计算错误：{details}",
+      "memory_error": "模型所需内存不足"
+    },
+    "results": {
+      "confidence": "置信度：{score}%",
+      "latency": "处理时间：{ms}ms",
+      "tokens_processed": "处理的标记数：{count}",
+      "gpu_utilization": "GPU使用率：{percent}%"
+    }
+  },
+  "security": {
+    "authentication": {
+      "login": "登录",
+      "logout": "退出登录",
+      "register": "创建账户",
+      "forgot_password": "忘记密码？",
+      "reset_password": "重置密码",
+      "change_password": "修改密码",
+      "two_factor": "双因素验证",
+      "verify_code": "验证代码"
+    },
+    "authorization": {
+      "access_denied": "访问被拒绝",
+      "insufficient_permissions": "您没有执行此操作的权限",
+      "session_expired": "会话已过期，请重新登录",
+      "account_locked": "由于登录尝试失败，账户暂时被锁定"
+    },
+    "compliance": {
+      "gdpr": {
+        "title": "GDPR合规性",
+        "consent_required": "我们需要您的同意来处理您的数据",
+        "data_processing": "数据处理信息",
+        "your_rights": "您的权利",
+        "contact_dpo": "联系数据保护官"
+      },
+      "ccpa": {
+        "title": "加州消费者隐私法",
+        "do_not_sell": "不要出售我的个人信息",
+        "request_deletion": "请求删除个人信息",
+        "know_about_data": "了解您的个人信息"
+      }
+    }
+  },
+  "monitoring": {
+    "metrics": {
+      "uptime": "运行时间",
+      "cpu_usage": "CPU使用率",
+      "memory_usage": "内存使用量",
+      "gpu_usage": "GPU使用率",
+      "network_io": "网络I/O",
+      "disk_usage": "磁盘使用量",
+      "request_rate": "请求频率",
+      "error_rate": "错误率",
+      "response_time": "响应时间"
+    },
+    "alerts": {
+      "high_cpu": "检测到高CPU使用率",
+      "high_memory": "检测到高内存使用量",
+      "low_disk_space": "磁盘空间不足警告",
+      "service_down": "服务不可用",
+      "security_incident": "检测到安全事件",
+      "performance_degraded": "检测到性能下降"
+    }
+  },
+  "errors": {
+    "validation": {
+      "required": "此字段为必填项",
+      "invalid_email": "请输入有效的电子邮箱地址",
+      "invalid_format": "格式无效",
+      "too_short": "至少需要{min}个字符",
+      "too_long": "最多{max}个字符",
+      "invalid_number": "请输入有效数字",
+      "invalid_date": "请输入有效日期",
+      "passwords_dont_match": "密码不匹配"
+    },
+    "network": {
+      "connection_failed": "连接失败",
+      "timeout": "请求超时",
+      "server_error": "服务器错误",
+      "not_found": "资源未找到",
+      "forbidden": "访问被禁止",
+      "unauthorized": "未授权访问"
+    },
+    "system": {
+      "internal_error": "系统内部错误",
+      "service_unavailable": "服务暂时不可用",
+      "maintenance": "系统正在维护中",
+      "rate_limited": "请求过于频繁，请稍后重试"
+    }
+  },
+  "date": {
+    "formats": {
+      "short": "yyyy/MM/dd",
+      "medium": "yyyy年M月d日",
+      "long": "yyyy年M月d日",
+      "full": "yyyy年M月d日 EEEE"
+    },
+    "relative": {
+      "now": "现在",
+      "seconds_ago": "{count}秒前",
+      "minute_ago": "1分钟前",
+      "minutes_ago": "{count}分钟前",
+      "hour_ago": "1小时前",
+      "hours_ago": "{count}小时前",
+      "day_ago": "昨天",
+      "days_ago": "{count}天前",
+      "week_ago": "1周前",
+      "weeks_ago": "{count}周前",
+      "month_ago": "1个月前",
+      "months_ago": "{count}个月前",
+      "year_ago": "1年前",
+      "years_ago": "{count}年前"
+    }
+  },
+  "numbers": {
+    "decimal_separator": ".",
+    "thousands_separator": ",",
+    "currency_symbol": "¥",
+    "currency_position": "before"
+  }
+}

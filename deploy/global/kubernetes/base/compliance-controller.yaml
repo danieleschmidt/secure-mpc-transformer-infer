@@ -1,0 +1,498 @@
+# Compliance Controller for Global Data Privacy Management
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compliance-controller
+  namespace: mpc-system
+  labels:
+    app: compliance-controller
+    component: governance
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: compliance-controller
+  template:
+    metadata:
+      labels:
+        app: compliance-controller
+        component: governance
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: compliance-controller
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+      containers:
+      - name: compliance-controller
+        image: ghcr.io/mpc-transformer/compliance-controller:v1.0.0
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        env:
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: COMPLIANCE_FRAMEWORKS
+          value: "gdpr,ccpa,pdpa"
+        - name: GDPR_ENABLED
+          value: "true"
+        - name: CCPA_ENABLED
+          value: "true"
+        - name: PDPA_ENABLED
+          value: "true"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: compliance-db-credentials
+              key: url
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: compliance-encryption-keys
+              key: master-key
+        - name: DPO_CONTACT
+          value: "dpo@mpc-transformer.com"
+        - name: PRIVACY_OFFICER_CONTACT
+          value: "privacy@mpc-transformer.com"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/compliance
+          readOnly: true
+        - name: policies
+          mountPath: /etc/policies
+          readOnly: true
+        - name: temp
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: config
+        configMap:
+          name: compliance-config
+      - name: policies
+        configMap:
+          name: compliance-policies
+      - name: temp
+        emptyDir:
+          sizeLimit: 100Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: compliance-controller
+  namespace: mpc-system
+  labels:
+    app: compliance-controller
+spec:
+  selector:
+    app: compliance-controller
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: compliance-controller
+  namespace: mpc-system
+automountServiceAccountToken: true
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: compliance-controller
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["cronjobs", "jobs"]
+  verbs: ["create", "get", "list", "watch"]
+- apiGroups: ["policy"]
+  resources: ["poddisruptionbudgets"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: compliance-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: compliance-controller
+subjects:
+- kind: ServiceAccount
+  name: compliance-controller
+  namespace: mpc-system
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-config
+  namespace: mpc-system
+  labels:
+    app: compliance-controller
+data:
+  config.yaml: |
+    server:
+      bind_address: "0.0.0.0:8080"
+      metrics_address: "0.0.0.0:9090"
+      log_level: "info"
+      
+    compliance:
+      frameworks:
+        gdpr:
+          enabled: true
+          jurisdiction: "EU"
+          data_controller:
+            name: "MPC Transformer Services EU"
+            contact: "dpo@mpc-transformer.eu"
+            address: "123 Tech Street, Dublin, Ireland"
+          dpo_contact: "dpo@mpc-transformer.eu"
+          breach_notification:
+            authority_deadline_hours: 72
+            data_subject_deadline_hours: 72
+            
+        ccpa:
+          enabled: true
+          jurisdiction: "California, USA"
+          business_info:
+            name: "MPC Transformer Inc."
+            contact: "privacy@mpc-transformer.com"
+            address: "456 Innovation Ave, San Francisco, CA 94105"
+          privacy_rights_contact: "privacy@mpc-transformer.com"
+          
+        pdpa:
+          enabled: true
+          jurisdiction: "Singapore, Thailand, Malaysia"
+          organization_info:
+            name: "MPC Transformer APAC Pte Ltd"
+            contact: "privacy@mpc-transformer.asia"
+            address: "789 Tech Park, Singapore 138623"
+          dpo_contact: "dpo@mpc-transformer.asia"
+    
+    database:
+      encryption_at_rest: true
+      backup_encryption: true
+      audit_retention_years: 6
+      
+    data_processing:
+      default_retention_days: 730
+      anonymization_threshold_days: 2555  # 7 years
+      encryption_required: true
+      pseudonymization_enabled: true
+      
+    monitoring:
+      audit_log_enabled: true
+      compliance_metrics: true
+      alert_on_violations: true
+      
+  retention-policies.yaml: |
+    policies:
+      - category: "authentication_logs"
+        retention_days: 90
+        disposal_method: "deletion"
+        legal_basis: "security_monitoring"
+        
+      - category: "audit_logs"
+        retention_days: 2190  # 6 years
+        disposal_method: "anonymization"
+        legal_basis: "legal_compliance"
+        
+      - category: "user_data"
+        retention_days: 730   # 2 years
+        disposal_method: "erasure"
+        legal_basis: "service_provision"
+        
+      - category: "processing_metrics"
+        retention_days: 365   # 1 year
+        disposal_method: "anonymization"
+        legal_basis: "legitimate_interests"
+        
+      - category: "security_events"
+        retention_days: 2555  # 7 years
+        disposal_method: "pseudonymization"
+        legal_basis: "legal_compliance"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-policies
+  namespace: mpc-system
+  labels:
+    app: compliance-controller
+data:
+  privacy-policy.json: |
+    {
+      "version": "2.0",
+      "effective_date": "2024-01-01",
+      "languages": ["en", "es", "fr", "de", "ja", "zh"],
+      "jurisdictions": ["EU", "California", "APAC"],
+      "data_categories": [
+        "personal_identifiers",
+        "contact_information", 
+        "technical_data",
+        "processing_metrics",
+        "security_logs"
+      ],
+      "processing_purposes": [
+        "service_provision",
+        "security_monitoring",
+        "analytics",
+        "legal_compliance"
+      ],
+      "data_subject_rights": {
+        "gdpr": ["access", "rectification", "erasure", "restriction", "portability", "objection"],
+        "ccpa": ["know", "access", "delete", "opt_out"],
+        "pdpa": ["access", "correction", "deletion", "restriction"]
+      },
+      "contact_information": {
+        "dpo_eu": "dpo@mpc-transformer.eu",
+        "privacy_officer_us": "privacy@mpc-transformer.com",
+        "dpo_apac": "dpo@mpc-transformer.asia"
+      }
+    }
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: compliance-data-retention-cleanup
+  namespace: mpc-system
+  labels:
+    app: compliance-controller
+    task: data-retention
+spec:
+  schedule: "0 2 * * 0"  # Weekly on Sunday at 2 AM UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: compliance-controller
+            task: data-retention
+        spec:
+          restartPolicy: Never
+          serviceAccountName: compliance-controller
+          containers:
+          - name: data-retention-cleanup
+            image: ghcr.io/mpc-transformer/compliance-controller:v1.0.0
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting compliance data retention cleanup..."
+              
+              # Run data retention cleanup for all frameworks
+              python3 -m compliance.cleanup \
+                --framework=all \
+                --dry-run=false \
+                --log-level=info
+              
+              # Generate compliance reports
+              python3 -m compliance.report \
+                --output-format=json \
+                --output-path=/tmp/compliance-report.json
+              
+              echo "Compliance cleanup completed"
+            env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: compliance-db-credentials
+                  key: url
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: compliance-encryption-keys
+                  key: master-key
+            volumeMounts:
+            - name: config
+              mountPath: /etc/compliance
+              readOnly: true
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "200m"
+          volumes:
+          - name: config
+            configMap:
+              name: compliance-config
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: compliance-audit-report
+  namespace: mpc-system
+  labels:
+    app: compliance-controller
+    task: audit-report
+spec:
+  schedule: "0 6 1 * *"  # Monthly on 1st day at 6 AM UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: compliance-controller
+            task: audit-report
+        spec:
+          restartPolicy: Never
+          serviceAccountName: compliance-controller
+          containers:
+          - name: audit-report-generator
+            image: ghcr.io/mpc-transformer/compliance-controller:v1.0.0
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Generating monthly compliance audit report..."
+              
+              # Generate comprehensive audit report
+              python3 -m compliance.audit \
+                --period=monthly \
+                --frameworks=gdpr,ccpa,pdpa \
+                --output-format=pdf \
+                --output-path=/tmp/audit-report-$(date +%Y-%m).pdf
+              
+              # Send report to compliance team
+              python3 -m compliance.notify \
+                --report-path=/tmp/audit-report-$(date +%Y-%m).pdf \
+                --recipients=compliance@mpc-transformer.com
+              
+              echo "Audit report generated and sent"
+            env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: compliance-db-credentials
+                  key: url
+            - name: SMTP_CONFIG
+              valueFrom:
+                secretKeyRef:
+                  name: notification-credentials
+                  key: smtp-config
+            volumeMounts:
+            - name: config
+              mountPath: /etc/compliance
+              readOnly: true
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "200m"
+          volumes:
+          - name: config
+            configMap:
+              name: compliance-config
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: compliance-db-credentials
+  namespace: mpc-system
+  labels:
+    app: compliance-controller
+type: Opaque
+data:
+  # Base64 encoded database connection URL
+  url: <base64-encoded-database-url>
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: compliance-encryption-keys
+  namespace: mpc-system
+  labels:
+    app: compliance-controller
+type: Opaque
+data:
+  # Base64 encoded encryption keys for data protection
+  master-key: <base64-encoded-master-encryption-key>
+  anonymization-key: <base64-encoded-anonymization-key>
+  pseudonymization-salt: <base64-encoded-pseudonymization-salt>
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: compliance-controller
+  namespace: mpc-system
+  labels:
+    app: compliance-controller
+spec:
+  selector:
+    matchLabels:
+      app: compliance-controller
+  endpoints:
+  - port: metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    path: /metrics
+    honorLabels: true

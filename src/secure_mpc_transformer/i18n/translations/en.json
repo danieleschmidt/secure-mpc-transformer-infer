@@ -1,0 +1,221 @@
+{
+  "app": {
+    "name": "Secure MPC Transformer",
+    "description": "GPU-accelerated secure multi-party computation for transformer inference",
+    "version": "v0.2.0"
+  },
+  "ui": {
+    "buttons": {
+      "submit": "Submit",
+      "cancel": "Cancel",
+      "save": "Save",
+      "delete": "Delete",
+      "edit": "Edit",
+      "view": "View",
+      "download": "Download",
+      "upload": "Upload",
+      "refresh": "Refresh",
+      "close": "Close",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "continue": "Continue",
+      "reset": "Reset"
+    },
+    "labels": {
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "username": "Username",
+      "search": "Search",
+      "filter": "Filter",
+      "sort": "Sort",
+      "date": "Date",
+      "time": "Time",
+      "status": "Status",
+      "type": "Type",
+      "size": "Size",
+      "description": "Description",
+      "language": "Language",
+      "region": "Region",
+      "timezone": "Timezone"
+    },
+    "messages": {
+      "loading": "Loading...",
+      "saving": "Saving...",
+      "success": "Operation completed successfully",
+      "error": "An error occurred",
+      "warning": "Warning",
+      "info": "Information",
+      "no_data": "No data available",
+      "no_results": "No results found",
+      "confirm_delete": "Are you sure you want to delete this item?",
+      "unsaved_changes": "You have unsaved changes. Are you sure you want to leave?"
+    }
+  },
+  "mpc": {
+    "protocols": {
+      "semi_honest_3pc": "Semi-honest 3-Party Computation",
+      "aby3": "ABY3 Protocol",
+      "malicious_3pc": "Malicious 3-Party Computation"
+    },
+    "status": {
+      "initializing": "Initializing MPC protocol...",
+      "waiting_peers": "Waiting for peer connections...",
+      "connected": "Connected to {count} peers",
+      "computing": "Performing secure computation...",
+      "completed": "Computation completed successfully",
+      "failed": "Computation failed: {error}",
+      "timeout": "Computation timed out"
+    },
+    "errors": {
+      "peer_connection_failed": "Failed to connect to peer {peer_id}",
+      "invalid_protocol": "Invalid MPC protocol: {protocol}",
+      "insufficient_peers": "Insufficient peers for computation (need {required}, have {actual})",
+      "computation_error": "Error during secure computation: {details}",
+      "network_error": "Network communication error: {error}",
+      "timeout": "Operation timed out after {seconds} seconds"
+    }
+  },
+  "inference": {
+    "models": {
+      "bert_base": "BERT Base",
+      "bert_large": "BERT Large",
+      "roberta_base": "RoBERTa Base",
+      "distilbert": "DistilBERT",
+      "gpt2": "GPT-2"
+    },
+    "status": {
+      "loading_model": "Loading model {model_name}...",
+      "model_loaded": "Model loaded successfully",
+      "tokenizing": "Tokenizing input text...",
+      "processing": "Processing inference request...",
+      "generating": "Generating predictions...",
+      "complete": "Inference completed in {time}ms"
+    },
+    "errors": {
+      "model_not_found": "Model '{model}' not found",
+      "invalid_input": "Invalid input format",
+      "tokenization_failed": "Failed to tokenize input text",
+      "inference_failed": "Inference failed: {error}",
+      "gpu_error": "GPU computation error: {details}",
+      "memory_error": "Insufficient memory for model"
+    },
+    "results": {
+      "confidence": "Confidence: {score}%",
+      "latency": "Processing time: {ms}ms",
+      "tokens_processed": "Tokens processed: {count}",
+      "gpu_utilization": "GPU utilization: {percent}%"
+    }
+  },
+  "security": {
+    "authentication": {
+      "login": "Sign In",
+      "logout": "Sign Out",
+      "register": "Create Account",
+      "forgot_password": "Forgot Password?",
+      "reset_password": "Reset Password",
+      "change_password": "Change Password",
+      "two_factor": "Two-Factor Authentication",
+      "verify_code": "Verify Code"
+    },
+    "authorization": {
+      "access_denied": "Access denied",
+      "insufficient_permissions": "You don't have permission to perform this action",
+      "session_expired": "Your session has expired. Please sign in again",
+      "account_locked": "Account temporarily locked due to failed login attempts"
+    },
+    "compliance": {
+      "gdpr": {
+        "title": "GDPR Compliance",
+        "consent_required": "We need your consent to process your data",
+        "data_processing": "Data Processing Information",
+        "your_rights": "Your Rights",
+        "contact_dpo": "Contact Data Protection Officer"
+      },
+      "ccpa": {
+        "title": "California Consumer Privacy Act",
+        "do_not_sell": "Do Not Sell My Personal Information",
+        "request_deletion": "Request Deletion of Personal Information",
+        "know_about_data": "Know About Your Personal Information"
+      }
+    }
+  },
+  "monitoring": {
+    "metrics": {
+      "uptime": "Uptime",
+      "cpu_usage": "CPU Usage",
+      "memory_usage": "Memory Usage",
+      "gpu_usage": "GPU Usage",
+      "network_io": "Network I/O",
+      "disk_usage": "Disk Usage",
+      "request_rate": "Request Rate",
+      "error_rate": "Error Rate",
+      "response_time": "Response Time"
+    },
+    "alerts": {
+      "high_cpu": "High CPU usage detected",
+      "high_memory": "High memory usage detected",
+      "low_disk_space": "Low disk space warning",
+      "service_down": "Service is down",
+      "security_incident": "Security incident detected",
+      "performance_degraded": "Performance degradation detected"
+    }
+  },
+  "errors": {
+    "validation": {
+      "required": "This field is required",
+      "invalid_email": "Please enter a valid email address",
+      "invalid_format": "Invalid format",
+      "too_short": "Must be at least {min} characters",
+      "too_long": "Must be no more than {max} characters",
+      "invalid_number": "Please enter a valid number",
+      "invalid_date": "Please enter a valid date",
+      "passwords_dont_match": "Passwords don't match"
+    },
+    "network": {
+      "connection_failed": "Connection failed",
+      "timeout": "Request timed out",
+      "server_error": "Server error occurred",
+      "not_found": "Resource not found",
+      "forbidden": "Access forbidden",
+      "unauthorized": "Unauthorized access"
+    },
+    "system": {
+      "internal_error": "Internal system error",
+      "service_unavailable": "Service temporarily unavailable",
+      "maintenance": "System is under maintenance",
+      "rate_limited": "Too many requests. Please try again later"
+    }
+  },
+  "date": {
+    "formats": {
+      "short": "MM/dd/yyyy",
+      "medium": "MMM d, yyyy",
+      "long": "MMMM d, yyyy",
+      "full": "EEEE, MMMM d, yyyy"
+    },
+    "relative": {
+      "now": "now",
+      "seconds_ago": "{count} seconds ago",
+      "minute_ago": "a minute ago",
+      "minutes_ago": "{count} minutes ago",
+      "hour_ago": "an hour ago",
+      "hours_ago": "{count} hours ago",
+      "day_ago": "yesterday",
+      "days_ago": "{count} days ago",
+      "week_ago": "a week ago",
+      "weeks_ago": "{count} weeks ago",
+      "month_ago": "a month ago",
+      "months_ago": "{count} months ago",
+      "year_ago": "a year ago",
+      "years_ago": "{count} years ago"
+    }
+  },
+  "numbers": {
+    "decimal_separator": ".",
+    "thousands_separator": ",",
+    "currency_symbol": "$",
+    "currency_position": "before"
+  }
+}

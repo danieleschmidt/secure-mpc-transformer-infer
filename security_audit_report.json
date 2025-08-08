@@ -1,0 +1,1115 @@
+{
+  "audit_timestamp": "2025-08-08 09:23:02 UTC",
+  "audit_duration_seconds": 0.20691514015197754,
+  "repository_path": "/root/repo",
+  "overall_assessment": {
+    "status": "unknown",
+    "message": "No findings generated"
+  },
+  "categories": {
+    "Cryptographic Implementation": {
+      "findings_count": 50,
+      "findings": [
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 1,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 29,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 38,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 55,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 114,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 167,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 292,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 77,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 123,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 181,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 192,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 208,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 255,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 268,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 319,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 352,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 418,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 444,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 497,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 511,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 532,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 573,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 188,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 314,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 622,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 627,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 632,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 131,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 347,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 413,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 439,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 507,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 154,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 204,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 568,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 157,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 219,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 223,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 228,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 241,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 551,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": 692,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/protocols/base.py",
+          "line_number": 17,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/protocols/base.py",
+          "line_number": 86,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/protocols/base.py",
+          "line_number": 91,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/protocols/malicious_3pc.py",
+          "line_number": 60,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/protocols/semi_honest_3pc.py",
+          "line_number": 10,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "high",
+          "category": "Cryptographic Implementation",
+          "title": "Potential hardcoded secret",
+          "description": "String literal contains keywords suggesting it might be a hardcoded secret",
+          "file_path": "src/secure_mpc_transformer/protocols/semi_honest_3pc.py",
+          "line_number": 38,
+          "recommendation": "Use environment variables or secure key management for secrets",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "medium",
+          "category": "Cryptographic Implementation",
+          "title": "Security level constants not found",
+          "description": "Could not verify minimum security level constants in cryptographic implementations",
+          "file_path": null,
+          "line_number": null,
+          "recommendation": "Ensure all cryptographic operations specify minimum 128-bit security level",
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Cryptographic Implementation",
+          "title": "Good cryptographic practices found",
+          "description": "Implementation includes: Cryptographically secure random generation, Authenticated encryption, Key rotation support, Key expiration management",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        }
+      ]
+    },
+    "Key Management": {
+      "findings_count": 2,
+      "findings": [
+        {
+          "severity": "info",
+          "category": "Key Management",
+          "title": "Key management practices implemented",
+          "description": "Implemented: Key Generation, Key Rotation, Key Derivation, Key Expiration, Key Revocation, Secure Storage, Access Control",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Key Management",
+          "title": "Environment-based key storage",
+          "description": "Master key retrieval from environment variables detected",
+          "file_path": "src/secure_mpc_transformer/security/key_manager.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        }
+      ]
+    },
+    "Protocol Security": {
+      "findings_count": 10,
+      "findings": [
+        {
+          "severity": "info",
+          "category": "Protocol Security",
+          "title": "Security properties in aby3.py",
+          "description": "Implements: Privacy, Correctness",
+          "file_path": "src/secure_mpc_transformer/protocols/aby3.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "medium",
+          "category": "Protocol Security",
+          "title": "Limited error handling",
+          "description": "Protocol may lack comprehensive error handling",
+          "file_path": "src/secure_mpc_transformer/protocols/aby3.py",
+          "line_number": null,
+          "recommendation": "Implement robust error handling to prevent information leakage",
+          "cwe_id": "CWE-209"
+        },
+        {
+          "severity": "info",
+          "category": "Protocol Security",
+          "title": "Security properties in base.py",
+          "description": "Implements: Privacy, Correctness",
+          "file_path": "src/secure_mpc_transformer/protocols/base.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "medium",
+          "category": "Protocol Security",
+          "title": "Limited error handling",
+          "description": "Protocol may lack comprehensive error handling",
+          "file_path": "src/secure_mpc_transformer/protocols/base.py",
+          "line_number": null,
+          "recommendation": "Implement robust error handling to prevent information leakage",
+          "cwe_id": "CWE-209"
+        },
+        {
+          "severity": "info",
+          "category": "Protocol Security",
+          "title": "Security properties in factory.py",
+          "description": "Implements: Privacy, Correctness, Integrity, Malicious Security, Semi-honest Security",
+          "file_path": "src/secure_mpc_transformer/protocols/factory.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Protocol Security",
+          "title": "Error handling present",
+          "description": "Protocol includes error handling mechanisms",
+          "file_path": "src/secure_mpc_transformer/protocols/factory.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Protocol Security",
+          "title": "Security properties in malicious_3pc.py",
+          "description": "Implements: Privacy, Correctness, Integrity, Malicious Security",
+          "file_path": "src/secure_mpc_transformer/protocols/malicious_3pc.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "medium",
+          "category": "Protocol Security",
+          "title": "Limited error handling",
+          "description": "Protocol may lack comprehensive error handling",
+          "file_path": "src/secure_mpc_transformer/protocols/malicious_3pc.py",
+          "line_number": null,
+          "recommendation": "Implement robust error handling to prevent information leakage",
+          "cwe_id": "CWE-209"
+        },
+        {
+          "severity": "info",
+          "category": "Protocol Security",
+          "title": "Security properties in semi_honest_3pc.py",
+          "description": "Implements: Privacy, Correctness",
+          "file_path": "src/secure_mpc_transformer/protocols/semi_honest_3pc.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "medium",
+          "category": "Protocol Security",
+          "title": "Limited error handling",
+          "description": "Protocol may lack comprehensive error handling",
+          "file_path": "src/secure_mpc_transformer/protocols/semi_honest_3pc.py",
+          "line_number": null,
+          "recommendation": "Implement robust error handling to prevent information leakage",
+          "cwe_id": "CWE-209"
+        }
+      ]
+    },
+    "Input Validation": {
+      "findings_count": 6,
+      "findings": [
+        {
+          "severity": "info",
+          "category": "Input Validation",
+          "title": "Validation mechanisms in validators.py",
+          "description": "Implements: Input Sanitization, Type Checking, Range Validation, Schema Validation, XSS Prevention",
+          "file_path": "src/secure_mpc_transformer/utils/validators.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Input Validation",
+          "title": "Validation mechanisms in schema_validator.py",
+          "description": "Implements: Input Sanitization, Type Checking, Range Validation, Schema Validation, SQL Injection Prevention, XSS Prevention",
+          "file_path": "src/secure_mpc_transformer/validation/schema_validator.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Input Validation",
+          "title": "Validation mechanisms in routes.py",
+          "description": "Implements: Type Checking, Range Validation",
+          "file_path": "src/secure_mpc_transformer/api/routes.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Input Validation",
+          "title": "API validation present",
+          "description": "API file middleware.py includes validation mechanisms",
+          "file_path": "src/secure_mpc_transformer/api/middleware.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "medium",
+          "category": "Input Validation",
+          "title": "API endpoint validation needed",
+          "description": "API file routes.py handles requests but may lack validation",
+          "file_path": "src/secure_mpc_transformer/api/routes.py",
+          "line_number": null,
+          "recommendation": "Implement request validation for all API endpoints",
+          "cwe_id": "CWE-20"
+        },
+        {
+          "severity": "medium",
+          "category": "Input Validation",
+          "title": "API endpoint validation needed",
+          "description": "API file server.py handles requests but may lack validation",
+          "file_path": "src/secure_mpc_transformer/api/server.py",
+          "line_number": null,
+          "recommendation": "Implement request validation for all API endpoints",
+          "cwe_id": "CWE-20"
+        }
+      ]
+    },
+    "Error Handling": {
+      "findings_count": 2,
+      "findings": [
+        {
+          "severity": "info",
+          "category": "Error Handling",
+          "title": "Error handling practices implemented",
+          "description": "Implements: Custom Exceptions, Error Classification, Secure Logging, Stack Trace Handling, User-Safe Messages",
+          "file_path": "src/secure_mpc_transformer/utils/error_handling.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "medium",
+          "category": "Error Handling",
+          "title": "Missing error handling practices",
+          "description": "Consider implementing: Error Sanitization",
+          "file_path": "src/secure_mpc_transformer/utils/error_handling.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        }
+      ]
+    },
+    "Authentication & Authorization": {
+      "findings_count": 3,
+      "findings": [
+        {
+          "severity": "info",
+          "category": "Authentication & Authorization",
+          "title": "Auth mechanisms in session_manager.py",
+          "description": "Implements: Session Management, Token Authentication, Multi-factor Authentication, Password Hashing, Rate Limiting, CSRF Protection, Secure Headers",
+          "file_path": "src/secure_mpc_transformer/security/session_manager.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Authentication & Authorization",
+          "title": "Password hashing detected",
+          "description": "Password hashing mechanisms found",
+          "file_path": "src/secure_mpc_transformer/security/session_manager.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Authentication & Authorization",
+          "title": "Auth mechanisms in middleware.py",
+          "description": "Implements: Rate Limiting, Secure Headers",
+          "file_path": "src/secure_mpc_transformer/api/middleware.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        }
+      ]
+    },
+    "Network Security": {
+      "findings_count": 5,
+      "findings": [
+        {
+          "severity": "info",
+          "category": "Network Security",
+          "title": "DDoS Protection implementation found",
+          "description": "DDoS Protection mechanisms detected in ddos_protection.py",
+          "file_path": "src/secure_mpc_transformer/security/ddos_protection.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Network Security",
+          "title": "IP Filtering implementation found",
+          "description": "IP Filtering mechanisms detected in ddos_protection.py",
+          "file_path": "src/secure_mpc_transformer/security/ddos_protection.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Network Security",
+          "title": "Threat Detection implementation found",
+          "description": "Threat Detection mechanisms detected in ddos_protection.py",
+          "file_path": "src/secure_mpc_transformer/security/ddos_protection.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Network Security",
+          "title": "Request Validation implementation found",
+          "description": "Request Validation mechanisms detected in threat_detector.py",
+          "file_path": "src/secure_mpc_transformer/security/threat_detector.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "medium",
+          "category": "Network Security",
+          "title": "Missing critical network security features",
+          "description": "Consider implementing: TLS/SSL",
+          "file_path": null,
+          "line_number": null,
+          "recommendation": "Implement comprehensive network security measures",
+          "cwe_id": null
+        }
+      ]
+    },
+    "Data Protection": {
+      "findings_count": 4,
+      "findings": [
+        {
+          "severity": "info",
+          "category": "Data Protection",
+          "title": "Access Control implementation found",
+          "description": "Access Control mechanisms detected",
+          "file_path": "src/secure_mpc_transformer/caching/cache_manager.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Data Protection",
+          "title": "Data Retention implementation found",
+          "description": "Data Retention mechanisms detected",
+          "file_path": "src/secure_mpc_transformer/caching/cache_manager.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Data Protection",
+          "title": "Encryption in Transit implementation found",
+          "description": "Encryption in Transit mechanisms detected",
+          "file_path": "src/secure_mpc_transformer/caching/l2_cache.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "medium",
+          "category": "Data Protection",
+          "title": "Potential sensitive data logging",
+          "description": "Logging code may expose sensitive data",
+          "file_path": "src/secure_mpc_transformer/server.py",
+          "line_number": null,
+          "recommendation": "Implement log sanitization for sensitive data",
+          "cwe_id": "CWE-532"
+        }
+      ]
+    },
+    "Logging & Monitoring": {
+      "findings_count": 7,
+      "findings": [
+        {
+          "severity": "info",
+          "category": "Logging & Monitoring",
+          "title": "Health Checks implementation found",
+          "description": "Health Checks capabilities detected",
+          "file_path": "src/secure_mpc_transformer/monitoring/prometheus_metrics.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Logging & Monitoring",
+          "title": "Metrics Collection implementation found",
+          "description": "Metrics Collection capabilities detected",
+          "file_path": "src/secure_mpc_transformer/monitoring/prometheus_metrics.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Logging & Monitoring",
+          "title": "Performance Monitoring implementation found",
+          "description": "Performance Monitoring capabilities detected",
+          "file_path": "src/secure_mpc_transformer/monitoring/prometheus_metrics.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Logging & Monitoring",
+          "title": "Distributed Tracing implementation found",
+          "description": "Distributed Tracing capabilities detected",
+          "file_path": "src/secure_mpc_transformer/monitoring/distributed_tracing.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Logging & Monitoring",
+          "title": "Circuit Breakers implementation found",
+          "description": "Circuit Breakers capabilities detected",
+          "file_path": "src/secure_mpc_transformer/monitoring/circuit_breakers.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Logging & Monitoring",
+          "title": "Alerting implementation found",
+          "description": "Alerting capabilities detected",
+          "file_path": "src/secure_mpc_transformer/monitoring/circuit_breakers.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "medium",
+          "category": "Logging & Monitoring",
+          "title": "Audit logging not found",
+          "description": "No dedicated security audit logging found",
+          "file_path": null,
+          "line_number": null,
+          "recommendation": "Implement comprehensive audit logging for security events",
+          "cwe_id": null
+        }
+      ]
+    },
+    "Configuration Security": {
+      "findings_count": 5,
+      "findings": [
+        {
+          "severity": "info",
+          "category": "Configuration Security",
+          "title": "Security configurations in example_config.json",
+          "description": "Includes: Security Level, Timeout",
+          "file_path": "config/example_config.json",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "high",
+          "category": "Configuration Security",
+          "title": "Potential hardcoded secrets in config",
+          "description": "Configuration file may contain hardcoded secrets",
+          "file_path": "src/secure_mpc_transformer/config.py",
+          "line_number": null,
+          "recommendation": "Use environment variables for sensitive configuration",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "info",
+          "category": "Configuration Security",
+          "title": "Security configurations in config.py",
+          "description": "Includes: TLS/SSL, Encryption, Security Level",
+          "file_path": "src/secure_mpc_transformer/config.py",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Configuration Security",
+          "title": "Example configuration found",
+          "description": "Example config file provides security parameter templates",
+          "file_path": ".env.example",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Configuration Security",
+          "title": "Security configurations in .env.example",
+          "description": "Includes: TLS/SSL, Authentication, Encryption, Security Level, Timeout, Rate Limiting",
+          "file_path": ".env.example",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        }
+      ]
+    },
+    "Dependency Security": {
+      "findings_count": 3,
+      "findings": [
+        {
+          "severity": "info",
+          "category": "Dependency Security",
+          "title": "Version pinning detected",
+          "description": "Dependencies are version-pinned in pyproject.toml",
+          "file_path": "pyproject.toml",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Dependency Security",
+          "title": "Security-focused dependencies",
+          "description": "Uses security libraries: cryptography, pyjwt, bcrypt",
+          "file_path": "pyproject.toml",
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "low",
+          "category": "Dependency Security",
+          "title": "No dependency lock file",
+          "description": "Consider using dependency locking (poetry.lock, Pipfile.lock, etc.)",
+          "file_path": null,
+          "line_number": null,
+          "recommendation": "Use dependency locking for reproducible and secure builds",
+          "cwe_id": null
+        }
+      ]
+    },
+    "Code Quality": {
+      "findings_count": 4,
+      "findings": [
+        {
+          "severity": "info",
+          "category": "Code Quality",
+          "title": "Codebase statistics",
+          "description": "Project contains 81 Python files with 34,593 lines of code",
+          "file_path": null,
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "medium",
+          "category": "Code Quality",
+          "title": "Potential hardcoded IP addresses",
+          "description": "Found potential hardcoded IPs in 1 files",
+          "file_path": null,
+          "line_number": null,
+          "recommendation": "Use configuration files for IP addresses",
+          "cwe_id": "CWE-798"
+        },
+        {
+          "severity": "info",
+          "category": "Code Quality",
+          "title": "Good exception handling coverage",
+          "description": "Exception handling found in 52 files",
+          "file_path": null,
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        },
+        {
+          "severity": "info",
+          "category": "Code Quality",
+          "title": "Good logging coverage",
+          "description": "Logging usage found in 54 files",
+          "file_path": null,
+          "line_number": null,
+          "recommendation": null,
+          "cwe_id": null
+        }
+      ]
+    }
+  },
+  "all_findings": [],
+  "security_metrics": [],
+  "file_integrity": {
+    "src/secure_mpc_transformer/security/key_manager.py": "3c46ed3388a69bc2d521fc3fcdb29d0d25ee4e6fde30261f46e35a0a59c80a57",
+    "src/secure_mpc_transformer/protocols/__init__.py": "ec550b210c1ca98ccd9502c836ac8b237e2dbbc270d263bdf54b67e61454ee55",
+    "src/secure_mpc_transformer/protocols/aby3.py": "e2058d8c9b9901be651b4febc0ea5842012992e6cb69662e502e2e13fe35df57",
+    "src/secure_mpc_transformer/protocols/base.py": "f34777bc8dd7fdd97b06aa84c92a67ce4c22f37e85b2d3cc3f058cac649b2f61",
+    "src/secure_mpc_transformer/protocols/factory.py": "1e87d2373c4844bc95f7b78217662dfa6e7994b56b80b2db24a7fada4cd21bf0",
+    "src/secure_mpc_transformer/protocols/malicious_3pc.py": "dd7a6bec76f6ef29e18a625471c18521e47c12a53be5fa4c9d781f38feac881c",
+    "src/secure_mpc_transformer/protocols/semi_honest_3pc.py": "daa8234ae91954a17503b0fd58d23fb556cdd3187d087eb2c43772b540d930d8"
+  },
+  "recommendations": [],
+  "compliance_status": {
+    "OWASP_Top_10": {
+      "score": 10,
+      "max_score": 10,
+      "issues": []
+    },
+    "NIST_Cybersecurity": {
+      "score": 0,
+      "max_score": 5,
+      "issues": []
+    },
+    "SOC2": {
+      "score": 0,
+      "max_score": 5,
+      "issues": []
+    },
+    "ISO_27001": {
+      "score": 0,
+      "max_score": 8,
+      "issues": []
+    }
+  }
+}

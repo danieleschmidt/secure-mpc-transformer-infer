@@ -1,0 +1,427 @@
+# Global Prometheus configuration for multi-region MPC Transformer monitoring
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-global-config
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      scrape_timeout: 10s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: '{{ .Values.cluster.name }}'
+        region: '{{ .Values.cluster.region }}'
+        cloud_provider: '{{ .Values.cluster.cloudProvider }}'
+        environment: 'production'
+        
+    # Rule files
+    rule_files:
+      - "/etc/prometheus/rules/*.yml"
+      
+    # Alertmanager configuration
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - 'alertmanager.monitoring.svc.cluster.local:9093'
+          timeout: 10s
+          api_version: v2
+          
+    # Remote write configuration for global aggregation
+    remote_write:
+      - url: 'https://prometheus-global-aggregator.mpc-transformer.com/api/v1/write'
+        name: 'global-aggregator'
+        write_relabel_configs:
+          - source_labels: [__name__]
+            regex: 'mpc_transformer_.*|up|probe_.*'
+            action: keep
+        basic_auth:
+          username: '{{ .Values.global.prometheus.username }}'
+          password: '{{ .Values.global.prometheus.password }}'
+        tls_config:
+          insecure_skip_verify: false
+        queue_config:
+          max_samples_per_send: 1000
+          max_shards: 10
+          capacity: 5000
+          
+    # Remote read configuration for cross-region queries
+    remote_read:
+      - url: 'https://prometheus-global-aggregator.mpc-transformer.com/api/v1/read'
+        read_recent: true
+        basic_auth:
+          username: '{{ .Values.global.prometheus.username }}'
+          password: '{{ .Values.global.prometheus.password }}'
+        
+    # Scrape configurations
+    scrape_configs:
+      # MPC Transformer application metrics
+      - job_name: 'mpc-transformer'
+        scrape_interval: 10s
+        scrape_timeout: 8s
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - mpc-transformer-americas
+                - mpc-transformer-europe
+                - mpc-transformer-apac
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: mpc-transformer
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+            
+      # Kubernetes cluster monitoring
+      - job_name: 'kubernetes-apiservers'
+        kubernetes_sd_configs:
+          - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: default;kubernetes;https
+            
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            regex: (.+)
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/${1}/proxy/metrics
+            
+      - job_name: 'kubernetes-cadvisor'
+        kubernetes_sd_configs:
+          - role: node
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            regex: (.+)
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+            
+      # GPU metrics from DCGM exporter
+      - job_name: 'nvidia-dcgm-exporter'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: nvidia-dcgm-exporter
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            target_label: __address__
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+            
+      # Node exporter for system metrics
+      - job_name: 'node-exporter'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: node-exporter
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__address__]
+            action: replace
+            regex: ([^:]+)(?::\d+)?
+            replacement: $1:9100
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_node_name
+            replacement: node
+            
+      # kube-state-metrics for Kubernetes object metrics
+      - job_name: 'kube-state-metrics'
+        static_configs:
+          - targets: ['kube-state-metrics.kube-system.svc.cluster.local:8080']
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_service_label_(.+)
+            
+      # External services health probes
+      - job_name: 'blackbox-exporter'
+        metrics_path: /probe
+        params:
+          module: [http_2xx]
+        static_configs:
+          - targets:
+            # Regional endpoints
+            - https://us-east.mpc-transformer.com/health
+            - https://us-west.mpc-transformer.com/health
+            - https://eu-west.mpc-transformer.com/health
+            - https://eu-central.mpc-transformer.com/health
+            - https://ap-northeast.mpc-transformer.com/health
+            - https://ap-southeast.mpc-transformer.com/health
+            # Global endpoints
+            - https://api.mpc-transformer.com/health
+            - https://eu.mpc-transformer.com/health
+            - https://asia.mpc-transformer.com/health
+        relabel_configs:
+          - source_labels: [__address__]
+            target_label: __param_target
+          - source_labels: [__param_target]
+            target_label: instance
+          - target_label: __address__
+            replacement: blackbox-exporter.monitoring.svc.cluster.local:9115
+            
+      # Database monitoring
+      - job_name: 'postgres-exporter'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: postgres-exporter
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+            
+      # Redis monitoring for caching
+      - job_name: 'redis-exporter'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: redis-exporter
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+            
+      # Compliance controller metrics
+      - job_name: 'compliance-controller'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: compliance-controller
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            target_label: __address__
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            
+      # Istio service mesh metrics
+      - job_name: 'istio-mesh'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+              - istio-system
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: istio-proxy;http-monitoring
+          - source_labels: [__address__, __meta_kubernetes_endpoint_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:15090
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_service_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            action: replace
+            target_label: service_name
+            
+      # Cross-region connectivity probes
+      - job_name: 'cross-region-probe'
+        metrics_path: /probe
+        params:
+          module: [tcp_connect]
+        static_configs:
+          - targets:
+            - us-east.internal:50051
+            - us-west.internal:50051  
+            - eu-west.internal:50051
+            - eu-central.internal:50051
+            - ap-northeast.internal:50051
+            - ap-southeast.internal:50051
+        relabel_configs:
+          - source_labels: [__address__]
+            target_label: __param_target
+          - source_labels: [__param_target]
+            target_label: instance
+          - target_label: __address__
+            replacement: blackbox-exporter.monitoring.svc.cluster.local:9115
+          - source_labels: [__param_target]
+            regex: '([^:]+)\.internal:.*'
+            target_label: target_region
+            replacement: '$1'
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-recording-rules
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: rules
+data:
+  recording-rules.yml: |
+    groups:
+    - name: mpc-transformer-aggregations
+      interval: 30s
+      rules:
+      # Global aggregations
+      - record: mpc_transformer:global_request_rate
+        expr: sum(rate(mpc_transformer_requests_total[5m]))
+        
+      - record: mpc_transformer:global_error_rate
+        expr: sum(rate(mpc_transformer_errors_total[5m])) / sum(rate(mpc_transformer_requests_total[5m]))
+        
+      - record: mpc_transformer:global_p95_latency
+        expr: histogram_quantile(0.95, sum(rate(mpc_transformer_inference_duration_seconds_bucket[5m])))
+        
+      - record: mpc_transformer:global_p99_latency
+        expr: histogram_quantile(0.99, sum(rate(mpc_transformer_inference_duration_seconds_bucket[5m])))
+        
+      # Regional aggregations
+      - record: mpc_transformer:regional_request_rate
+        expr: sum by (region) (rate(mpc_transformer_requests_total[5m]))
+        
+      - record: mpc_transformer:regional_error_rate
+        expr: sum by (region) (rate(mpc_transformer_errors_total[5m])) / sum by (region) (rate(mpc_transformer_requests_total[5m]))
+        
+      - record: mpc_transformer:regional_p95_latency
+        expr: histogram_quantile(0.95, sum by (region) (rate(mpc_transformer_inference_duration_seconds_bucket[5m])))
+        
+      - record: mpc_transformer:regional_availability
+        expr: sum by (region) (up{job="mpc-transformer"}) / count by (region) (up{job="mpc-transformer"})
+        
+      # Cloud provider aggregations
+      - record: mpc_transformer:provider_request_rate
+        expr: sum by (cloud_provider) (rate(mpc_transformer_requests_total[5m]))
+        
+      - record: mpc_transformer:provider_error_rate
+        expr: sum by (cloud_provider) (rate(mpc_transformer_errors_total[5m])) / sum by (cloud_provider) (rate(mpc_transformer_requests_total[5m]))
+        
+      # SLA calculations
+      - record: mpc_transformer:global_sla_1h
+        expr: (sum(rate(mpc_transformer_requests_total[1h])) - sum(rate(mpc_transformer_errors_total[1h]))) / sum(rate(mpc_transformer_requests_total[1h]))
+        
+      - record: mpc_transformer:global_sla_24h
+        expr: (sum(rate(mpc_transformer_requests_total[24h])) - sum(rate(mpc_transformer_errors_total[24h]))) / sum(rate(mpc_transformer_requests_total[24h]))
+        
+      - record: mpc_transformer:regional_sla_1h
+        expr: (sum by (region) (rate(mpc_transformer_requests_total[1h])) - sum by (region) (rate(mpc_transformer_errors_total[1h]))) / sum by (region) (rate(mpc_transformer_requests_total[1h]))
+        
+      # Resource utilization aggregations
+      - record: mpc_transformer:global_cpu_utilization
+        expr: avg(cpu_usage_percent{job="mpc-transformer"})
+        
+      - record: mpc_transformer:regional_cpu_utilization
+        expr: avg by (region) (cpu_usage_percent{job="mpc-transformer"})
+        
+      - record: mpc_transformer:global_memory_utilization
+        expr: avg(memory_usage_percent{job="mpc-transformer"})
+        
+      - record: mpc_transformer:regional_memory_utilization
+        expr: avg by (region) (memory_usage_percent{job="mpc-transformer"})
+        
+      - record: mpc_transformer:global_gpu_utilization
+        expr: avg(nvidia_gpu_utilization{job="nvidia-dcgm-exporter"})
+        
+      - record: mpc_transformer:regional_gpu_utilization
+        expr: avg by (region) (nvidia_gpu_utilization{job="nvidia-dcgm-exporter"})
+        
+      # Protocol-specific metrics
+      - record: mpc_transformer:protocol_success_rate
+        expr: sum by (protocol, region) (rate(mpc_transformer_protocol_success_total[5m])) / sum by (protocol, region) (rate(mpc_transformer_protocol_requests_total[5m]))
+        
+      - record: mpc_transformer:protocol_latency_p95
+        expr: histogram_quantile(0.95, sum by (protocol, region) (rate(mpc_transformer_protocol_duration_seconds_bucket[5m])))
+        
+      # Compliance metrics
+      - record: mpc_transformer:compliance_request_rate
+        expr: sum by (region, compliance_framework) (rate(mpc_transformer_compliance_requests_total[5m]))
+        
+      - record: mpc_transformer:compliance_success_rate
+        expr: sum by (region, compliance_framework) (rate(mpc_transformer_compliance_success_total[5m])) / sum by (region, compliance_framework) (rate(mpc_transformer_compliance_requests_total[5m]))
+        
+      # I18n metrics
+      - record: mpc_transformer:i18n_usage_by_language
+        expr: sum by (language, region) (rate(mpc_transformer_i18n_requests_total[5m]))
+        
+      - record: mpc_transformer:i18n_translation_cache_hit_rate
+        expr: sum by (language) (rate(mpc_transformer_i18n_cache_hits_total[5m])) / sum by (language) (rate(mpc_transformer_i18n_cache_requests_total[5m]))
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-global
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: server
+spec:
+  type: ClusterIP
+  ports:
+  - name: web
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    app: prometheus
+    component: server

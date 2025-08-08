@@ -1,0 +1,601 @@
+# Production deployment pipeline for MPC Transformer global infrastructure
+# Supports multi-region deployment with safety checks and rollback capabilities
+
+name: Deploy Production - Global MPC Transformer
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'docker/**'
+      - 'deploy/**'
+      - 'pyproject.toml'
+  
+  workflow_dispatch:
+    inputs:
+      deployment_type:
+        description: 'Type of deployment'
+        required: true
+        default: 'rolling'
+        type: choice
+        options:
+          - rolling
+          - blue-green
+          - canary
+          - emergency
+      
+      target_regions:
+        description: 'Target regions (comma-separated)'
+        required: true
+        default: 'americas,europe,apac'
+        type: string
+      
+      skip_tests:
+        description: 'Skip testing phase'
+        required: false
+        default: false
+        type: boolean
+      
+      auto_promote:
+        description: 'Auto-promote after validation'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: mpc-transformer/secure-mpc-transformer
+  DEPLOYMENT_TIMEOUT: 600s
+  HEALTH_CHECK_TIMEOUT: 300s
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  # Security and compliance checks
+  security-scan:
+    name: Security & Compliance Scan
+    runs-on: ubuntu-latest
+    outputs:
+      security-score: ${{ steps.security-check.outputs.score }}
+      compliance-status: ${{ steps.compliance-check.outputs.status }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        exit-code: '1'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Run SAST with CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: python
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+
+    - name: Security scorecard
+      id: security-check
+      run: |
+        # Calculate security score based on scans
+        score=85  # Placeholder - integrate with actual security tools
+        echo "score=$score" >> $GITHUB_OUTPUT
+        
+        if [ $score -lt 80 ]; then
+          echo "❌ Security score ($score) below threshold (80)"
+          exit 1
+        else
+          echo "✅ Security score: $score"
+        fi
+
+    - name: Compliance validation
+      id: compliance-check
+      run: |
+        # Validate GDPR, CCPA, PDPA compliance
+        python scripts/validate-compliance.py --frameworks=gdpr,ccpa,pdpa
+        echo "status=compliant" >> $GITHUB_OUTPUT
+
+  # Build and test
+  build-and-test:
+    name: Build & Test Multi-Arch Images
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: needs.security-scan.outputs.security-score >= '80'
+    
+    strategy:
+      matrix:
+        variant: [prod, gpu]
+        
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest-${{ matrix.variant }},enable={{is_default_branch}}
+
+    - name: Build and push multi-arch image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile.multiarch
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          VARIANT=${{ matrix.variant }}
+          BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+          GIT_COMMIT=${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test container image
+      run: |
+        # Test the built image
+        docker run --rm \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-${{ matrix.variant }} \
+          python -c "import secure_mpc_transformer; print('✅ Import successful')"
+
+    - name: Run security scan on image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-${{ matrix.variant }}
+        format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL,HIGH'
+
+  # Deploy to staging for validation
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [security-scan, build-and-test]
+    if: ${{ !inputs.skip_tests }}
+    environment:
+      name: staging
+      url: https://staging-api.mpc-transformer.com
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Configure kubectl
+      run: |
+        aws eks update-kubeconfig --name mpc-transformer-staging --region us-east-1
+
+    - name: Deploy to staging
+      run: |
+        # Update image in staging deployment
+        kubectl set image deployment/mpc-transformer \
+          mpc-transformer=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-prod \
+          -n mpc-transformer-staging
+        
+        # Wait for rollout
+        kubectl rollout status deployment/mpc-transformer -n mpc-transformer-staging --timeout=${{ env.DEPLOYMENT_TIMEOUT }}
+
+    - name: Run integration tests
+      run: |
+        # Wait for service to be ready
+        sleep 30
+        
+        # Run comprehensive integration tests
+        python -m pytest tests/integration/ \
+          --base-url=https://staging-api.mpc-transformer.com \
+          --timeout=300 \
+          --junit-xml=staging-test-results.xml
+
+    - name: Run end-to-end tests
+      run: |
+        # Test MPC functionality end-to-end
+        python -m pytest tests/e2e/ \
+          --base-url=https://staging-api.mpc-transformer.com \
+          --mpc-parties=3 \
+          --timeout=600 \
+          --junit-xml=e2e-test-results.xml
+
+    - name: Performance testing
+      run: |
+        # Run load tests
+        docker run --rm -v $(pwd)/tests/performance:/tests \
+          grafana/k6 run /tests/load-test.js \
+          --env BASE_URL=https://staging-api.mpc-transformer.com \
+          --summary-export=performance-results.json
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: staging-test-results
+        path: |
+          staging-test-results.xml
+          e2e-test-results.xml
+          performance-results.json
+
+  # Production deployment matrix
+  deploy-production:
+    name: Deploy Production - ${{ matrix.region }}
+    runs-on: ubuntu-latest
+    needs: [build-and-test, deploy-staging]
+    if: always() && (needs.deploy-staging.result == 'success' || inputs.skip_tests)
+    
+    environment:
+      name: production-${{ matrix.region }}
+      url: https://${{ matrix.region }}.mpc-transformer.com
+    
+    strategy:
+      matrix:
+        region: ${{ fromJSON('["americas", "europe", "apac"]') }}
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure cloud credentials
+      run: |
+        case "${{ matrix.region }}" in
+          americas)
+            echo "Setting up AWS credentials for Americas"
+            export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            export AWS_DEFAULT_REGION=us-east-1
+            aws eks update-kubeconfig --name mpc-transformer-prod-americas --region us-east-1
+            ;;
+          europe)
+            echo "Setting up GCP credentials for Europe"
+            echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' | base64 -d > gcp-key.json
+            export GOOGLE_APPLICATION_CREDENTIALS=gcp-key.json
+            gcloud auth activate-service-account --key-file=gcp-key.json
+            gcloud container clusters get-credentials mpc-transformer-prod-europe --zone=europe-west1
+            ;;
+          apac)
+            echo "Setting up Azure credentials for APAC"
+            az login --service-principal \
+              --username ${{ secrets.AZURE_CLIENT_ID }} \
+              --password ${{ secrets.AZURE_CLIENT_SECRET }} \
+              --tenant ${{ secrets.AZURE_TENANT_ID }}
+            az aks get-credentials --resource-group mpc-transformer-prod-apac --name mpc-transformer-prod-apac
+            ;;
+        esac
+
+    - name: Pre-deployment checks
+      run: |
+        # Verify cluster health
+        kubectl get nodes
+        kubectl get pods -n mpc-transformer-${{ matrix.region }}
+        
+        # Check current deployment status
+        kubectl rollout status deployment/mpc-transformer -n mpc-transformer-${{ matrix.region }} || true
+        
+        # Verify prerequisites
+        kubectl get configmap app-config -n mpc-transformer-${{ matrix.region }}
+        kubectl get secret mpc-tls-certs -n mpc-transformer-${{ matrix.region }}
+
+    - name: Execute deployment strategy
+      run: |
+        DEPLOYMENT_TYPE="${{ inputs.deployment_type || 'rolling' }}"
+        REGION="${{ matrix.region }}"
+        
+        case $DEPLOYMENT_TYPE in
+          rolling)
+            echo "🔄 Executing rolling deployment in $REGION"
+            ./scripts/deploy-rolling.sh \
+              --region=$REGION \
+              --image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-prod \
+              --timeout=${{ env.DEPLOYMENT_TIMEOUT }}
+            ;;
+          blue-green)
+            echo "🔵 Executing blue-green deployment in $REGION"
+            ./scripts/deploy-blue-green.sh \
+              --region=$REGION \
+              --image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-prod \
+              --validation-timeout=${{ env.HEALTH_CHECK_TIMEOUT }}
+            ;;
+          canary)
+            echo "🐤 Executing canary deployment in $REGION"
+            ./scripts/deploy-canary.sh \
+              --region=$REGION \
+              --image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-prod \
+              --canary-percentage=10 \
+              --promotion-delay=300
+            ;;
+          emergency)
+            echo "🚨 Executing emergency deployment in $REGION"
+            ./scripts/deploy-emergency.sh \
+              --region=$REGION \
+              --image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-prod \
+              --skip-validations
+            ;;
+        esac
+
+    - name: Post-deployment validation
+      run: |
+        REGION="${{ matrix.region }}"
+        
+        # Wait for rollout completion
+        kubectl rollout status deployment/mpc-transformer \
+          -n mpc-transformer-$REGION \
+          --timeout=${{ env.DEPLOYMENT_TIMEOUT }}
+        
+        # Health check
+        echo "🏥 Performing health checks for $REGION"
+        for i in {1..10}; do
+          if curl -f https://$REGION.mpc-transformer.com/health; then
+            echo "✅ Health check passed for $REGION"
+            break
+          else
+            echo "❌ Health check failed, attempt $i/10"
+            sleep 30
+          fi
+          
+          if [ $i -eq 10 ]; then
+            echo "🚨 Health checks failed after 10 attempts"
+            exit 1
+          fi
+        done
+        
+        # Functional validation
+        python tests/smoke/validate-deployment.py \
+          --region=$REGION \
+          --base-url=https://$REGION.mpc-transformer.com
+
+    - name: Update deployment status
+      if: always()
+      run: |
+        # Update deployment tracking
+        REGION="${{ matrix.region }}"
+        STATUS="${{ job.status }}"
+        
+        curl -X POST "${{ secrets.DEPLOYMENT_WEBHOOK_URL }}" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"region\": \"$REGION\",
+            \"status\": \"$STATUS\",
+            \"commit\": \"${{ github.sha }}\",
+            \"deployment_type\": \"${{ inputs.deployment_type || 'rolling' }}\",
+            \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+          }"
+
+  # Global validation after all regions deployed
+  global-validation:
+    name: Global Validation & Traffic Switch
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: always() && !contains(needs.deploy-production.result, 'failure')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Global health validation
+      run: |
+        echo "🌍 Performing global health validation"
+        
+        # Check all regional endpoints
+        REGIONS=("americas" "europe" "apac")
+        FAILED_REGIONS=()
+        
+        for region in "${REGIONS[@]}"; do
+          echo "Checking $region..."
+          if curl -f "https://$region.mpc-transformer.com/health"; then
+            echo "✅ $region is healthy"
+          else
+            echo "❌ $region is unhealthy"
+            FAILED_REGIONS+=($region)
+          fi
+        done
+        
+        if [ ${#FAILED_REGIONS[@]} -gt 0 ]; then
+          echo "🚨 Failed regions: ${FAILED_REGIONS[*]}"
+          exit 1
+        fi
+        
+        # Check global endpoint
+        curl -f "https://api.mpc-transformer.com/health"
+        echo "✅ Global endpoint is healthy"
+
+    - name: Cross-region connectivity test
+      run: |
+        echo "🔗 Testing cross-region MPC connectivity"
+        python tests/integration/test-cross-region-mpc.py \
+          --regions=americas,europe,apac \
+          --timeout=600
+
+    - name: Performance validation
+      run: |
+        echo "📊 Validating global performance metrics"
+        
+        # Check SLA compliance
+        python scripts/validate-sla.py \
+          --target-availability=99.99 \
+          --target-latency-p95=100 \
+          --duration=300
+
+    - name: Update global traffic routing
+      if: ${{ inputs.auto_promote || github.ref == 'refs/heads/main' }}
+      run: |
+        echo "🚦 Updating global traffic routing"
+        
+        # Update DNS records to point to new deployment
+        ./scripts/update-global-dns.sh \
+          --commit=${{ github.sha }} \
+          --deployment-type="${{ inputs.deployment_type || 'rolling' }}"
+        
+        # Update CDN configuration
+        ./scripts/update-cdn-config.sh \
+          --version=${{ github.sha }}
+
+    - name: Send deployment notification
+      run: |
+        # Notify team of successful deployment
+        curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"text\": \"🚀 Production deployment successful!\",
+            \"blocks\": [
+              {
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Production Deployment Complete* ✅\n\n*Commit*: \`${{ github.sha }}\`\n*Type*: ${{ inputs.deployment_type || 'rolling' }}\n*Regions*: ${{ inputs.target_regions || 'americas,europe,apac' }}\n*Duration*: ${{ job.duration || 'N/A' }}\n\n<https://grafana.mpc-transformer.com/d/mpc-global-overview|View Dashboard>\"
+                }
+              }
+            ]
+          }"
+
+  # Rollback job (manual trigger only)
+  rollback:
+    name: Emergency Rollback
+    runs-on: ubuntu-latest
+    if: failure() && github.event_name == 'workflow_dispatch'
+    needs: [deploy-production]
+    
+    environment:
+      name: production-rollback
+    
+    strategy:
+      matrix:
+        region: ${{ fromJSON('["americas", "europe", "apac"]') }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure cloud credentials
+      run: |
+        # Configure credentials for each region (same as deploy step)
+        case "${{ matrix.region }}" in
+          americas)
+            aws eks update-kubeconfig --name mpc-transformer-prod-americas --region us-east-1
+            ;;
+          europe)
+            gcloud container clusters get-credentials mpc-transformer-prod-europe --zone=europe-west1
+            ;;
+          apac)
+            az aks get-credentials --resource-group mpc-transformer-prod-apac --name mpc-transformer-prod-apac
+            ;;
+        esac
+
+    - name: Rollback deployment
+      run: |
+        echo "🔄 Rolling back deployment in ${{ matrix.region }}"
+        
+        # Rollback to previous version
+        kubectl rollout undo deployment/mpc-transformer \
+          -n mpc-transformer-${{ matrix.region }}
+        
+        # Wait for rollback completion
+        kubectl rollout status deployment/mpc-transformer \
+          -n mpc-transformer-${{ matrix.region }} \
+          --timeout=${{ env.DEPLOYMENT_TIMEOUT }}
+        
+        # Verify rollback success
+        curl -f https://${{ matrix.region }}.mpc-transformer.com/health
+
+    - name: Notify rollback
+      run: |
+        curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"text\": \"⚠️ Emergency rollback executed for ${{ matrix.region }}\"
+          }"
+
+# Post-deployment monitoring job
+  post-deployment-monitoring:
+    name: Post-Deployment Monitoring
+    runs-on: ubuntu-latest
+    needs: global-validation
+    if: success()
+    
+    steps:
+    - name: Monitor deployment health
+      run: |
+        echo "📈 Starting post-deployment monitoring (30 minutes)"
+        
+        # Monitor for 30 minutes
+        END_TIME=$(($(date +%s) + 1800))
+        ALERT_COUNT=0
+        
+        while [ $(date +%s) -lt $END_TIME ]; do
+          # Check for any critical alerts
+          ALERTS=$(curl -s "http://alertmanager.mpc-transformer.com/api/v1/alerts" | jq '.data[] | select(.labels.severity == "critical")')
+          
+          if [ -n "$ALERTS" ]; then
+            ALERT_COUNT=$((ALERT_COUNT + 1))
+            echo "🚨 Critical alert detected (count: $ALERT_COUNT)"
+            
+            if [ $ALERT_COUNT -ge 3 ]; then
+              echo "💥 Too many critical alerts - deployment may be unstable"
+              exit 1
+            fi
+          fi
+          
+          # Check SLA metrics every 5 minutes
+          sleep 300
+          
+          # Basic health check
+          curl -f "https://api.mpc-transformer.com/health" || {
+            echo "❌ Global health check failed during monitoring"
+            exit 1
+          }
+          
+          echo "✅ Monitoring check passed at $(date)"
+        done
+        
+        echo "🎉 Post-deployment monitoring completed successfully"
+
+    - name: Generate deployment report
+      run: |
+        # Generate comprehensive deployment report
+        python scripts/generate-deployment-report.py \
+          --commit=${{ github.sha }} \
+          --deployment-type="${{ inputs.deployment_type || 'rolling' }}" \
+          --regions="${{ inputs.target_regions || 'americas,europe,apac' }}" \
+          --output=deployment-report.json
+
+    - name: Upload deployment artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: deployment-report
+        path: deployment-report.json

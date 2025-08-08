@@ -1,0 +1,221 @@
+{
+  "app": {
+    "name": "Sicherer MPC-Transformer",
+    "description": "GPU-beschleunigte sichere Multi-Party-Berechnung für Transformer-Inferenz",
+    "version": "v0.2.0"
+  },
+  "ui": {
+    "buttons": {
+      "submit": "Senden",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "view": "Anzeigen",
+      "download": "Herunterladen",
+      "upload": "Hochladen",
+      "refresh": "Aktualisieren",
+      "close": "Schließen",
+      "back": "Zurück",
+      "next": "Weiter",
+      "previous": "Vorherige",
+      "continue": "Fortfahren",
+      "reset": "Zurücksetzen"
+    },
+    "labels": {
+      "name": "Name",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "username": "Benutzername",
+      "search": "Suchen",
+      "filter": "Filtern",
+      "sort": "Sortieren",
+      "date": "Datum",
+      "time": "Zeit",
+      "status": "Status",
+      "type": "Typ",
+      "size": "Größe",
+      "description": "Beschreibung",
+      "language": "Sprache",
+      "region": "Region",
+      "timezone": "Zeitzone"
+    },
+    "messages": {
+      "loading": "Lädt...",
+      "saving": "Speichert...",
+      "success": "Vorgang erfolgreich abgeschlossen",
+      "error": "Ein Fehler ist aufgetreten",
+      "warning": "Warnung",
+      "info": "Information",
+      "no_data": "Keine Daten verfügbar",
+      "no_results": "Keine Ergebnisse gefunden",
+      "confirm_delete": "Sind Sie sicher, dass Sie dieses Element löschen möchten?",
+      "unsaved_changes": "Sie haben ungespeicherte Änderungen. Sind Sie sicher, dass Sie fortfahren möchten?"
+    }
+  },
+  "mpc": {
+    "protocols": {
+      "semi_honest_3pc": "Semi-ehrliche 3-Party-Berechnung",
+      "aby3": "ABY3-Protokoll",
+      "malicious_3pc": "Bösartige 3-Party-Berechnung"
+    },
+    "status": {
+      "initializing": "MPC-Protokoll wird initialisiert...",
+      "waiting_peers": "Warten auf Peer-Verbindungen...",
+      "connected": "Verbunden mit {count} Peers",
+      "computing": "Sichere Berechnung wird durchgeführt...",
+      "completed": "Berechnung erfolgreich abgeschlossen",
+      "failed": "Berechnung fehlgeschlagen: {error}",
+      "timeout": "Berechnungszeit überschritten"
+    },
+    "errors": {
+      "peer_connection_failed": "Verbindung zu Peer {peer_id} fehlgeschlagen",
+      "invalid_protocol": "Ungültiges MPC-Protokoll: {protocol}",
+      "insufficient_peers": "Unzureichende Peers für Berechnung (benötigt {required}, hat {actual})",
+      "computation_error": "Fehler bei sicherer Berechnung: {details}",
+      "network_error": "Netzwerk-Kommunikationsfehler: {error}",
+      "timeout": "Vorgang nach {seconds} Sekunden abgelaufen"
+    }
+  },
+  "inference": {
+    "models": {
+      "bert_base": "BERT Base",
+      "bert_large": "BERT Large",
+      "roberta_base": "RoBERTa Base",
+      "distilbert": "DistilBERT",
+      "gpt2": "GPT-2"
+    },
+    "status": {
+      "loading_model": "Modell {model_name} wird geladen...",
+      "model_loaded": "Modell erfolgreich geladen",
+      "tokenizing": "Eingabetext wird tokenisiert...",
+      "processing": "Inferenz-Anfrage wird verarbeitet...",
+      "generating": "Vorhersagen werden generiert...",
+      "complete": "Inferenz in {time}ms abgeschlossen"
+    },
+    "errors": {
+      "model_not_found": "Modell '{model}' nicht gefunden",
+      "invalid_input": "Ungültiges Eingabeformat",
+      "tokenization_failed": "Tokenisierung des Eingabetexts fehlgeschlagen",
+      "inference_failed": "Inferenz fehlgeschlagen: {error}",
+      "gpu_error": "GPU-Berechnungsfehler: {details}",
+      "memory_error": "Unzureichender Speicher für Modell"
+    },
+    "results": {
+      "confidence": "Vertrauen: {score}%",
+      "latency": "Verarbeitungszeit: {ms}ms",
+      "tokens_processed": "Token verarbeitet: {count}",
+      "gpu_utilization": "GPU-Auslastung: {percent}%"
+    }
+  },
+  "security": {
+    "authentication": {
+      "login": "Anmelden",
+      "logout": "Abmelden",
+      "register": "Konto erstellen",
+      "forgot_password": "Passwort vergessen?",
+      "reset_password": "Passwort zurücksetzen",
+      "change_password": "Passwort ändern",
+      "two_factor": "Zwei-Faktor-Authentifizierung",
+      "verify_code": "Code verifizieren"
+    },
+    "authorization": {
+      "access_denied": "Zugriff verweigert",
+      "insufficient_permissions": "Sie haben keine Berechtigung für diese Aktion",
+      "session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an",
+      "account_locked": "Konto temporär gesperrt aufgrund fehlgeschlagener Anmeldeversuche"
+    },
+    "compliance": {
+      "gdpr": {
+        "title": "DSGVO-Compliance",
+        "consent_required": "Wir benötigen Ihre Zustimmung zur Verarbeitung Ihrer Daten",
+        "data_processing": "Datenverarbeitungsinformationen",
+        "your_rights": "Ihre Rechte",
+        "contact_dpo": "Datenschutzbeauftragten kontaktieren"
+      },
+      "ccpa": {
+        "title": "California Consumer Privacy Act",
+        "do_not_sell": "Meine persönlichen Daten nicht verkaufen",
+        "request_deletion": "Löschung persönlicher Daten beantragen",
+        "know_about_data": "Über Ihre persönlichen Daten erfahren"
+      }
+    }
+  },
+  "monitoring": {
+    "metrics": {
+      "uptime": "Betriebszeit",
+      "cpu_usage": "CPU-Auslastung",
+      "memory_usage": "Speicherverbrauch",
+      "gpu_usage": "GPU-Auslastung",
+      "network_io": "Netzwerk-E/A",
+      "disk_usage": "Festplattennutzung",
+      "request_rate": "Anfragerate",
+      "error_rate": "Fehlerrate",
+      "response_time": "Antwortzeit"
+    },
+    "alerts": {
+      "high_cpu": "Hohe CPU-Auslastung erkannt",
+      "high_memory": "Hoher Speicherverbrauch erkannt",
+      "low_disk_space": "Warnung: Wenig Festplattenspeicher",
+      "service_down": "Service ist nicht verfügbar",
+      "security_incident": "Sicherheitsvorfall erkannt",
+      "performance_degraded": "Leistungsverschlechterung erkannt"
+    }
+  },
+  "errors": {
+    "validation": {
+      "required": "Dieses Feld ist erforderlich",
+      "invalid_email": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+      "invalid_format": "Ungültiges Format",
+      "too_short": "Muss mindestens {min} Zeichen haben",
+      "too_long": "Darf maximal {max} Zeichen haben",
+      "invalid_number": "Bitte geben Sie eine gültige Nummer ein",
+      "invalid_date": "Bitte geben Sie ein gültiges Datum ein",
+      "passwords_dont_match": "Passwörter stimmen nicht überein"
+    },
+    "network": {
+      "connection_failed": "Verbindung fehlgeschlagen",
+      "timeout": "Anfrage-Timeout",
+      "server_error": "Server-Fehler aufgetreten",
+      "not_found": "Ressource nicht gefunden",
+      "forbidden": "Zugriff verboten",
+      "unauthorized": "Nicht autorisierter Zugriff"
+    },
+    "system": {
+      "internal_error": "Interner Systemfehler",
+      "service_unavailable": "Service vorübergehend nicht verfügbar",
+      "maintenance": "System befindet sich in Wartung",
+      "rate_limited": "Zu viele Anfragen. Bitte versuchen Sie es später erneut"
+    }
+  },
+  "date": {
+    "formats": {
+      "short": "dd.MM.yyyy",
+      "medium": "d. MMM yyyy",
+      "long": "d. MMMM yyyy",
+      "full": "EEEE, d. MMMM yyyy"
+    },
+    "relative": {
+      "now": "jetzt",
+      "seconds_ago": "vor {count} Sekunden",
+      "minute_ago": "vor einer Minute",
+      "minutes_ago": "vor {count} Minuten",
+      "hour_ago": "vor einer Stunde",
+      "hours_ago": "vor {count} Stunden",
+      "day_ago": "gestern",
+      "days_ago": "vor {count} Tagen",
+      "week_ago": "vor einer Woche",
+      "weeks_ago": "vor {count} Wochen",
+      "month_ago": "vor einem Monat",
+      "months_ago": "vor {count} Monaten",
+      "year_ago": "vor einem Jahr",
+      "years_ago": "vor {count} Jahren"
+    }
+  },
+  "numbers": {
+    "decimal_separator": ",",
+    "thousands_separator": ".",
+    "currency_symbol": "€",
+    "currency_position": "after"
+  }
+}

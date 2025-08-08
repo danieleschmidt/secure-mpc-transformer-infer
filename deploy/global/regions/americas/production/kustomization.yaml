@@ -1,0 +1,57 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: mpc-transformer-americas-production
+
+namespace: mpc-transformer-americas
+
+resources:
+  - ../../../kubernetes/base
+  - namespace.yaml
+  - regional-config.yaml
+  - compliance-config.yaml
+
+patchesStrategicMerge:
+  - deployment-patch.yaml
+  - service-patch.yaml
+  - ingress-patch.yaml
+
+configMapGenerator:
+  - name: regional-config
+    files:
+      - regional-settings.yaml
+      - compliance-settings.yaml
+      - i18n-settings.yaml
+
+secretGenerator:
+  - name: regional-secrets
+    files:
+      - tls-cert.pem
+      - tls-key.pem
+      - jwt-secret.key
+    type: kubernetes.io/tls
+
+images:
+  - name: mpc-transformer
+    newName: ghcr.io/mpc-transformer/secure-mpc-transformer
+    newTag: v0.2.0-americas-prod
+
+replicas:
+  - name: mpc-transformer
+    count: 6
+
+commonLabels:
+  environment: production
+  region: americas
+  tier: production
+  compliance: ccpa-sox
+
+commonAnnotations:
+  deployment.kubernetes.io/revision: "1"
+  meta.helm.sh/release-name: "mpc-transformer-americas"
+  meta.helm.sh/release-namespace: "mpc-transformer-americas"
+  region.mpc-transformer.com/primary: "us-east-1"
+  region.mpc-transformer.com/secondary: "us-west-2"
+  compliance.mpc-transformer.com/ccpa: "enabled"
+  compliance.mpc-transformer.com/sox: "enabled"

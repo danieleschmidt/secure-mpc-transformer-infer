@@ -1,0 +1,221 @@
+{
+  "app": {
+    "name": "Transformateur MPC Sécurisé",
+    "description": "Calcul sécurisé multi-parties accéléré par GPU pour l'inférence de transformateurs",
+    "version": "v0.2.0"
+  },
+  "ui": {
+    "buttons": {
+      "submit": "Soumettre",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "delete": "Supprimer",
+      "edit": "Modifier",
+      "view": "Voir",
+      "download": "Télécharger",
+      "upload": "Téléverser",
+      "refresh": "Actualiser",
+      "close": "Fermer",
+      "back": "Retour",
+      "next": "Suivant",
+      "previous": "Précédent",
+      "continue": "Continuer",
+      "reset": "Réinitialiser"
+    },
+    "labels": {
+      "name": "Nom",
+      "email": "E-mail",
+      "password": "Mot de passe",
+      "username": "Nom d'utilisateur",
+      "search": "Rechercher",
+      "filter": "Filtrer",
+      "sort": "Trier",
+      "date": "Date",
+      "time": "Heure",
+      "status": "Statut",
+      "type": "Type",
+      "size": "Taille",
+      "description": "Description",
+      "language": "Langue",
+      "region": "Région",
+      "timezone": "Fuseau horaire"
+    },
+    "messages": {
+      "loading": "Chargement...",
+      "saving": "Enregistrement...",
+      "success": "Opération réussie",
+      "error": "Une erreur s'est produite",
+      "warning": "Avertissement",
+      "info": "Information",
+      "no_data": "Aucune donnée disponible",
+      "no_results": "Aucun résultat trouvé",
+      "confirm_delete": "Êtes-vous sûr de vouloir supprimer cet élément ?",
+      "unsaved_changes": "Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir quitter ?"
+    }
+  },
+  "mpc": {
+    "protocols": {
+      "semi_honest_3pc": "Calcul 3-Parties Semi-honnête",
+      "aby3": "Protocole ABY3",
+      "malicious_3pc": "Calcul 3-Parties Malveillant"
+    },
+    "status": {
+      "initializing": "Initialisation du protocole MPC...",
+      "waiting_peers": "Attente des connexions des pairs...",
+      "connected": "Connecté à {count} pairs",
+      "computing": "Exécution du calcul sécurisé...",
+      "completed": "Calcul terminé avec succès",
+      "failed": "Calcul échoué : {error}",
+      "timeout": "Délai de calcul dépassé"
+    },
+    "errors": {
+      "peer_connection_failed": "Échec de connexion au pair {peer_id}",
+      "invalid_protocol": "Protocole MPC invalide : {protocol}",
+      "insufficient_peers": "Pairs insuffisants pour le calcul (besoin de {required}, a {actual})",
+      "computation_error": "Erreur pendant le calcul sécurisé : {details}",
+      "network_error": "Erreur de communication réseau : {error}",
+      "timeout": "Opération expirée après {seconds} secondes"
+    }
+  },
+  "inference": {
+    "models": {
+      "bert_base": "BERT Base",
+      "bert_large": "BERT Large",
+      "roberta_base": "RoBERTa Base",
+      "distilbert": "DistilBERT",
+      "gpt2": "GPT-2"
+    },
+    "status": {
+      "loading_model": "Chargement du modèle {model_name}...",
+      "model_loaded": "Modèle chargé avec succès",
+      "tokenizing": "Tokenisation du texte d'entrée...",
+      "processing": "Traitement de la demande d'inférence...",
+      "generating": "Génération des prédictions...",
+      "complete": "Inférence terminée en {time}ms"
+    },
+    "errors": {
+      "model_not_found": "Modèle '{model}' non trouvé",
+      "invalid_input": "Format d'entrée invalide",
+      "tokenization_failed": "Échec de la tokenisation du texte d'entrée",
+      "inference_failed": "Inférence échouée : {error}",
+      "gpu_error": "Erreur de calcul GPU : {details}",
+      "memory_error": "Mémoire insuffisante pour le modèle"
+    },
+    "results": {
+      "confidence": "Confiance : {score}%",
+      "latency": "Temps de traitement : {ms}ms",
+      "tokens_processed": "Tokens traités : {count}",
+      "gpu_utilization": "Utilisation GPU : {percent}%"
+    }
+  },
+  "security": {
+    "authentication": {
+      "login": "Se connecter",
+      "logout": "Se déconnecter",
+      "register": "Créer un compte",
+      "forgot_password": "Mot de passe oublié ?",
+      "reset_password": "Réinitialiser le mot de passe",
+      "change_password": "Changer le mot de passe",
+      "two_factor": "Authentification à deux facteurs",
+      "verify_code": "Vérifier le code"
+    },
+    "authorization": {
+      "access_denied": "Accès refusé",
+      "insufficient_permissions": "Vous n'avez pas la permission d'effectuer cette action",
+      "session_expired": "Votre session a expiré. Veuillez vous reconnecter",
+      "account_locked": "Compte temporairement verrouillé en raison d'échecs de connexion"
+    },
+    "compliance": {
+      "gdpr": {
+        "title": "Conformité RGPD",
+        "consent_required": "Nous avons besoin de votre consentement pour traiter vos données",
+        "data_processing": "Information sur le traitement des données",
+        "your_rights": "Vos droits",
+        "contact_dpo": "Contacter le délégué à la protection des données"
+      },
+      "ccpa": {
+        "title": "Loi sur la confidentialité des consommateurs de Californie",
+        "do_not_sell": "Ne pas vendre mes informations personnelles",
+        "request_deletion": "Demander la suppression d'informations personnelles",
+        "know_about_data": "Connaître vos informations personnelles"
+      }
+    }
+  },
+  "monitoring": {
+    "metrics": {
+      "uptime": "Temps de fonctionnement",
+      "cpu_usage": "Utilisation CPU",
+      "memory_usage": "Utilisation mémoire",
+      "gpu_usage": "Utilisation GPU",
+      "network_io": "E/S réseau",
+      "disk_usage": "Utilisation disque",
+      "request_rate": "Taux de requêtes",
+      "error_rate": "Taux d'erreur",
+      "response_time": "Temps de réponse"
+    },
+    "alerts": {
+      "high_cpu": "Utilisation CPU élevée détectée",
+      "high_memory": "Utilisation mémoire élevée détectée",
+      "low_disk_space": "Avertissement d'espace disque faible",
+      "service_down": "Service indisponible",
+      "security_incident": "Incident de sécurité détecté",
+      "performance_degraded": "Dégradation des performances détectée"
+    }
+  },
+  "errors": {
+    "validation": {
+      "required": "Ce champ est obligatoire",
+      "invalid_email": "Veuillez entrer une adresse e-mail valide",
+      "invalid_format": "Format invalide",
+      "too_short": "Doit contenir au moins {min} caractères",
+      "too_long": "Doit contenir au maximum {max} caractères",
+      "invalid_number": "Veuillez entrer un nombre valide",
+      "invalid_date": "Veuillez entrer une date valide",
+      "passwords_dont_match": "Les mots de passe ne correspondent pas"
+    },
+    "network": {
+      "connection_failed": "Connexion échouée",
+      "timeout": "Délai de requête dépassé",
+      "server_error": "Erreur serveur survenue",
+      "not_found": "Ressource non trouvée",
+      "forbidden": "Accès interdit",
+      "unauthorized": "Accès non autorisé"
+    },
+    "system": {
+      "internal_error": "Erreur système interne",
+      "service_unavailable": "Service temporairement indisponible",
+      "maintenance": "Le système est en maintenance",
+      "rate_limited": "Trop de requêtes. Veuillez réessayer plus tard"
+    }
+  },
+  "date": {
+    "formats": {
+      "short": "dd/MM/yyyy",
+      "medium": "d MMM yyyy",
+      "long": "d MMMM yyyy",
+      "full": "EEEE d MMMM yyyy"
+    },
+    "relative": {
+      "now": "maintenant",
+      "seconds_ago": "il y a {count} secondes",
+      "minute_ago": "il y a une minute",
+      "minutes_ago": "il y a {count} minutes",
+      "hour_ago": "il y a une heure",
+      "hours_ago": "il y a {count} heures",
+      "day_ago": "hier",
+      "days_ago": "il y a {count} jours",
+      "week_ago": "il y a une semaine",
+      "weeks_ago": "il y a {count} semaines",
+      "month_ago": "il y a un mois",
+      "months_ago": "il y a {count} mois",
+      "year_ago": "il y a un an",
+      "years_ago": "il y a {count} ans"
+    }
+  },
+  "numbers": {
+    "decimal_separator": ",",
+    "thousands_separator": " ",
+    "currency_symbol": "€",
+    "currency_position": "after"
+  }
+}

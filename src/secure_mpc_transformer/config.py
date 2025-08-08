@@ -116,3 +116,60 @@ class SecurityConfig:
             batch_size=16,
             num_threads=4
         )
+
+
+def get_default_config() -> Dict[str, Any]:
+    """Get default configuration."""
+    return {
+        "protocol": {
+            "name": "aby3",
+            "security_level": 128,
+            "num_parties": 3,
+            "gpu_acceleration": True
+        },
+        "model": {
+            "default_model": "bert-base-uncased",
+            "max_sequence_length": 512,
+            "cache_size": 100
+        },
+        "server": {
+            "host": "0.0.0.0",
+            "port": 8080,
+            "workers": 1
+        }
+    }
+
+
+def load_config_from_file(config_path: str) -> Dict[str, Any]:
+    """Load configuration from JSON or YAML file."""
+    from pathlib import Path
+    import json
+    
+    config_file = Path(config_path)
+    if not config_file.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+    
+    with open(config_file, 'r') as f:
+        if config_file.suffix.lower() == '.json':
+            return json.load(f)
+        elif config_file.suffix.lower() in ['.yaml', '.yml']:
+            try:
+                import yaml
+                return yaml.safe_load(f)
+            except ImportError:
+                raise ImportError("PyYAML required for YAML config files. Install with: pip install pyyaml")
+        else:
+            raise ValueError(f"Unsupported config file format: {config_file.suffix}")
+
+
+def merge_configs(base_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge two configuration dictionaries."""
+    merged = base_config.copy()
+    
+    for key, value in override_config.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+            merged[key] = merge_configs(merged[key], value)
+        else:
+            merged[key] = value
+    
+    return merged

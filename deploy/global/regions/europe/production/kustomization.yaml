@@ -1,0 +1,59 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: mpc-transformer-europe-production
+
+namespace: mpc-transformer-europe
+
+resources:
+  - ../../../kubernetes/base
+  - namespace.yaml
+  - regional-config.yaml
+  - gdpr-compliance.yaml
+
+patchesStrategicMerge:
+  - deployment-patch.yaml
+  - service-patch.yaml
+  - ingress-patch.yaml
+
+configMapGenerator:
+  - name: regional-config
+    files:
+      - regional-settings.yaml
+      - gdpr-settings.yaml
+      - i18n-settings.yaml
+
+secretGenerator:
+  - name: regional-secrets
+    files:
+      - tls-cert.pem
+      - tls-key.pem
+      - jwt-secret.key
+      - gdpr-encryption.key
+    type: kubernetes.io/tls
+
+images:
+  - name: mpc-transformer
+    newName: ghcr.io/mpc-transformer/secure-mpc-transformer
+    newTag: v0.2.0-europe-prod
+
+replicas:
+  - name: mpc-transformer
+    count: 6
+
+commonLabels:
+  environment: production
+  region: europe
+  tier: production
+  compliance: gdpr-iso27001
+
+commonAnnotations:
+  deployment.kubernetes.io/revision: "1"
+  meta.helm.sh/release-name: "mpc-transformer-europe"
+  meta.helm.sh/release-namespace: "mpc-transformer-europe"
+  region.mpc-transformer.com/primary: "eu-west-1"
+  region.mpc-transformer.com/secondary: "eu-central-1"
+  compliance.mpc-transformer.com/gdpr: "enabled"
+  compliance.mpc-transformer.com/iso27001: "enabled"
+  data.mpc-transformer.com/classification: "restricted"
