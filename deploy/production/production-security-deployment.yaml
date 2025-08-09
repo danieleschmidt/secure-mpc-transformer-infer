@@ -1,0 +1,774 @@
+# Production Security Deployment for Secure MPC Transformer
+# Advanced security orchestrator with comprehensive defensive measures
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secure-mpc-transformer
+  labels:
+    security-level: "high"
+    compliance: "gdpr,iso27001,nist"
+    app: "secure-mpc-transformer"
+---
+# Security Context and Pod Security Policy
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: secure-mpc-sa
+  namespace: secure-mpc-transformer
+  labels:
+    app: "secure-mpc-transformer"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: secure-mpc-role
+  namespace: secure-mpc-transformer
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets", "pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: secure-mpc-rb
+  namespace: secure-mpc-transformer
+subjects:
+- kind: ServiceAccount
+  name: secure-mpc-sa
+  namespace: secure-mpc-transformer
+roleRef:
+  kind: Role
+  name: secure-mpc-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# ConfigMap for Security Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-config
+  namespace: secure-mpc-transformer
+data:
+  security-config.yaml: |
+    security:
+      enhanced_validator:
+        enabled: true
+        ml_anomaly_detection: true
+        quantum_validation: true
+        validation_timeout: 5.0
+        cache_size: 10000
+        
+      quantum_monitor:
+        enabled: true
+        coherence_threshold: 0.1
+        side_channel_detection: true
+        power_analysis: true
+        timing_analysis: true
+        monitoring_interval: 10
+        
+      incident_response:
+        enabled: true
+        auto_response: true
+        escalation_enabled: true
+        notification_channels: ["slack", "email", "webhook"]
+        response_timeout: 30
+        forensic_capture: true
+        
+      orchestrator:
+        cache_strategy: "adaptive"
+        load_balancer_method: "threat_aware"
+        auto_scaling: true
+        min_instances: 3
+        max_instances: 20
+        target_utilization: 0.7
+        
+    monitoring:
+      dashboard_enabled: true
+      metrics_retention: "7d"
+      alerting_enabled: true
+      prometheus_integration: true
+      grafana_integration: true
+      
+    compliance:
+      gdpr_enabled: true
+      audit_logging: true
+      data_retention_days: 90
+      encryption_at_rest: true
+      encryption_in_transit: true
+      
+  prometheus-config.yaml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      
+    rule_files:
+      - "/etc/prometheus/rules/*.yml"
+      
+    scrape_configs:
+      - job_name: 'secure-mpc-transformer'
+        static_configs:
+          - targets: ['secure-mpc-service:9090']
+        metrics_path: '/metrics'
+        scrape_interval: 10s
+        
+      - job_name: 'security-metrics'
+        static_configs:
+          - targets: ['security-dashboard-service:9091']
+        metrics_path: '/security/metrics'
+        scrape_interval: 30s
+        
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ['alertmanager:9093']
+---
+# Secret for sensitive configuration
+apiVersion: v1
+kind: Secret
+metadata:
+  name: security-secrets
+  namespace: secure-mpc-transformer
+type: Opaque
+stringData:
+  master-key: "YOUR_MASTER_KEY_BASE64"
+  jwt-secret: "YOUR_JWT_SECRET"
+  encryption-key: "YOUR_ENCRYPTION_KEY"
+  slack-webhook: "YOUR_SLACK_WEBHOOK_URL"
+  email-config: |
+    smtp_server: "smtp.example.com"
+    smtp_port: "587"
+    username: "alerts@example.com"
+    password: "YOUR_EMAIL_PASSWORD"
+---
+# Main Security Orchestrator Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: security-orchestrator
+  namespace: secure-mpc-transformer
+  labels:
+    app: "security-orchestrator"
+    component: "core"
+    security: "high"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: "security-orchestrator"
+  template:
+    metadata:
+      labels:
+        app: "security-orchestrator"
+        component: "core"
+        security: "high"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: secure-mpc-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: orchestrator
+        image: secure-mpc-transformer:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        env:
+        - name: SECURITY_CONFIG_PATH
+          value: "/etc/security/security-config.yaml"
+        - name: PROMETHEUS_MULTIPROC_DIR
+          value: "/tmp/prometheus"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: ENABLE_SECURITY_ORCHESTRATOR
+          value: "true"
+        - name: ENABLE_QUANTUM_MONITORING
+          value: "true"
+        - name: MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: security-secrets
+              key: master-key
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: security-secrets
+              key: jwt-secret
+        volumeMounts:
+        - name: security-config
+          mountPath: /etc/security
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        - name: prometheus-multiproc
+          mountPath: /tmp/prometheus
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 10
+      volumes:
+      - name: security-config
+        configMap:
+          name: security-config
+      - name: tmp
+        emptyDir: {}
+      - name: prometheus-multiproc
+        emptyDir: {}
+      nodeSelector:
+        security-tier: "high"
+      tolerations:
+      - key: "security-tier"
+        operator: "Equal"
+        value: "high"
+        effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - security-orchestrator
+              topologyKey: kubernetes.io/hostname
+---
+# Security Dashboard Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: security-dashboard
+  namespace: secure-mpc-transformer
+  labels:
+    app: "security-dashboard"
+    component: "monitoring"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: "security-dashboard"
+  template:
+    metadata:
+      labels:
+        app: "security-dashboard"
+        component: "monitoring"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9091"
+        prometheus.io/path: "/security/metrics"
+    spec:
+      serviceAccountName: secure-mpc-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: dashboard
+        image: secure-mpc-transformer:latest
+        command: ["python", "-m", "secure_mpc_transformer.monitoring.dashboard_server"]
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 8081
+          name: http
+          protocol: TCP
+        - containerPort: 9091
+          name: metrics
+          protocol: TCP
+        env:
+        - name: DASHBOARD_CONFIG_PATH
+          value: "/etc/security/security-config.yaml"
+        - name: LOG_LEVEL
+          value: "INFO"
+        volumeMounts:
+        - name: security-config
+          mountPath: /etc/security
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: security-config
+        configMap:
+          name: security-config
+      - name: tmp
+        emptyDir: {}
+---
+# Redis Cache for Security Data
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: security-cache
+  namespace: secure-mpc-transformer
+  labels:
+    app: "security-cache"
+    component: "cache"
+spec:
+  serviceName: "security-cache"
+  replicas: 3
+  selector:
+    matchLabels:
+      app: "security-cache"
+  template:
+    metadata:
+      labels:
+        app: "security-cache"
+        component: "cache"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 999
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 6379
+          name: redis
+        args:
+        - redis-server
+        - --appendonly
+        - "yes"
+        - --maxmemory
+        - "512mb"
+        - --maxmemory-policy
+        - "allkeys-lru"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: tmp
+        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: "ssd-encrypted"
+---
+# Services
+apiVersion: v1
+kind: Service
+metadata:
+  name: security-orchestrator-service
+  namespace: secure-mpc-transformer
+  labels:
+    app: "security-orchestrator"
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:region:account:certificate/cert-id"
+spec:
+  type: LoadBalancer
+  selector:
+    app: "security-orchestrator"
+  ports:
+  - name: https
+    port: 443
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: security-dashboard-service
+  namespace: secure-mpc-transformer
+  labels:
+    app: "security-dashboard"
+spec:
+  type: ClusterIP
+  selector:
+    app: "security-dashboard"
+  ports:
+  - name: http
+    port: 8081
+    targetPort: 8081
+    protocol: TCP
+  - name: metrics
+    port: 9091
+    targetPort: 9091
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: security-cache-service
+  namespace: secure-mpc-transformer
+  labels:
+    app: "security-cache"
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: "security-cache"
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+    protocol: TCP
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: security-orchestrator-hpa
+  namespace: secure-mpc-transformer
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: security-orchestrator
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: security_threats_per_second
+      target:
+        type: AverageValue
+        averageValue: "10"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      selectPolicy: Min
+---
+# Network Policies for Security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: security-network-policy
+  namespace: secure-mpc-transformer
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - podSelector:
+        matchLabels:
+          app: security-orchestrator
+    - podSelector:
+        matchLabels:
+          app: security-dashboard
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 8081
+    - protocol: TCP
+      port: 9090
+    - protocol: TCP
+      port: 9091
+  egress:
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  - to:
+    - podSelector:
+        matchLabels:
+          app: security-cache
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+---
+# Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: security-orchestrator-pdb
+  namespace: secure-mpc-transformer
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: security-orchestrator
+---
+# Monitoring and Alerting
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-alerts
+  namespace: secure-mpc-transformer
+data:
+  security-alerts.yml: |
+    groups:
+    - name: security-alerts
+      rules:
+      - alert: HighThreatDetectionRate
+        expr: rate(security_threats_detected_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High threat detection rate"
+          description: "Detected {{ $value }} threats per second over the last 5 minutes"
+          
+      - alert: SecurityValidationFailure
+        expr: rate(security_validation_failures_total[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "Security validation system failure"
+          description: "Security validation failure rate: {{ $value }}"
+          
+      - alert: QuantumCoherenceLow
+        expr: quantum_coherence_level < 0.1
+        for: 30s
+        labels:
+          severity: warning
+          category: quantum
+        annotations:
+          summary: "Quantum coherence below threshold"
+          description: "Quantum coherence level: {{ $value }}"
+          
+      - alert: IncidentResponseSystemDown
+        expr: up{job="incident-response"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "Incident response system is down"
+          description: "The incident response system has been down for more than 1 minute"
+          
+      - alert: SecurityCacheMiss
+        expr: (rate(security_cache_misses_total[5m]) / rate(security_cache_requests_total[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High security cache miss rate"
+          description: "Security cache miss rate: {{ $value | humanizePercentage }}"
+---
+# Storage Classes for Encrypted Storage
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ssd-encrypted
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp3
+  encrypted: "true"
+  kmsKeyId: "arn:aws:kms:region:account:key/key-id"
+  fsType: ext4
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+---
+# Ingress with TLS and Security Headers
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: security-ingress
+  namespace: secure-mpc-transformer
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+      more_set_headers "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'";
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($request_method !~ ^(GET|POST|PUT|DELETE|HEAD|OPTIONS)$) {
+        return 405;
+      }
+spec:
+  tls:
+  - hosts:
+    - secure-mpc.example.com
+    - dashboard.secure-mpc.example.com
+    secretName: security-tls-secret
+  rules:
+  - host: secure-mpc.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: security-orchestrator-service
+            port:
+              number: 443
+  - host: dashboard.secure-mpc.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: security-dashboard-service
+            port:
+              number: 8081
