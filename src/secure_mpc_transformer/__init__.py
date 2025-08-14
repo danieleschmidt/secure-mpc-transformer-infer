@@ -40,6 +40,12 @@ from .profiling import (
     PerformanceProfiler, ProfilingConfig
 )
 
+# Autonomous SDLC Core
+from .core import (
+    AutonomousExecutor, ExecutionTask, ExecutionPhase,
+    TaskPriority, ExecutionMetrics
+)
+
 __all__ = [
     # Core components
     "SecureTransformer", 
@@ -82,5 +88,12 @@ __all__ = [
     
     # Profiling and optimization
     "PerformanceProfiler",
-    "ProfilingConfig"
+    "ProfilingConfig",
+    
+    # Autonomous SDLC
+    "AutonomousExecutor",
+    "ExecutionTask",
+    "ExecutionPhase",
+    "TaskPriority",
+    "ExecutionMetrics"
 ]
