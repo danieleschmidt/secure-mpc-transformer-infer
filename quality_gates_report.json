@@ -1,133 +1,100 @@
 {
-  "overall_status": "EXCELLENT",
+  "timestamp": "2025-08-16T04:11:44.987695",
+  "overall_score": 0.8196019923382023,
+  "overall_status": "FAILED",
   "summary": {
-    "total_quality_gates": 8,
-    "passed_quality_gates": 8,
-    "pass_rate_percent": 100.0,
-    "average_score": 98.1098125,
-    "total_execution_time": 1.397002935409546
+    "total_execution_time": 1.965404079000109,
+    "gates_executed": 4,
+    "gates_passed": 1,
+    "gates_warning": 2,
+    "gates_failed": 1,
+    "quality_level": "ENTERPRISE",
+    "average_gate_score": 0.8196019923382023,
+    "production_ready": false,
+    "critical_issues": 1,
+    "minor_issues": 2
   },
-  "quality_gates": [
+  "gate_results": [
     {
-      "name": "Generation 1 Basic Functionality",
-      "passed": true,
-      "score": 100.0,
-      "execution_time": 0.7232222557067871,
-      "details": {
-        "returncode": 0,
-        "stdout_lines": 17,
-        "stderr_lines": 31
-      },
-      "error_message": null
+      "gate_name": "Comprehensive Testing",
+      "status": "WARNING",
+      "score": 0.9151775887074278,
+      "details": "Testing adequate: 27 failures, coverage below target",
+      "execution_time": 0.048796454000239464,
+      "metrics": {
+        "total_tests": 369,
+        "passed_tests": 342,
+        "failed_tests": 27,
+        "test_pass_rate": 0.9294686006529752,
+        "code_coverage": 0.7657535902475983,
+        "coverage_target": 0.85,
+        "lines_covered": 6011,
+        "total_lines": 7850,
+        "test_files_found": 28
+      }
     },
     {
-      "name": "Generation 2 Robustness",
-      "passed": true,
-      "score": 100.0,
-      "execution_time": 0.48036646842956543,
-      "details": {
-        "returncode": 0,
-        "error_recovery": true,
-        "security_orchestration": true,
-        "health_monitoring": true
-      },
-      "error_message": null
+      "gate_name": "Security Validation",
+      "status": "FAILED",
+      "score": 0.6,
+      "details": "Security issues detected: 44 vulnerabilities",
+      "execution_time": 0.4157228969997959,
+      "metrics": {
+        "vulnerability_scan_score": 0.0,
+        "dependency_audit_score": 1.0,
+        "secrets_scan_score": 0.3999999999999999,
+        "code_security_score": 1.0,
+        "total_vulnerabilities": 44,
+        "critical_vulnerabilities": 0,
+        "high_vulnerabilities": 15,
+        "medium_vulnerabilities": 16,
+        "secrets_found": 3,
+        "dependencies_scanned": 204
+      }
     },
     {
-      "name": "Generation 3 Scaling",
-      "passed": true,
-      "score": 100.0,
-      "execution_time": 0.18511390686035156,
-      "details": {
-        "returncode": 0,
-        "throughput_ops_sec": 16781.2,
-        "avg_latency_ms": 2.43,
-        "cache_hit_rate_percent": 0.0,
-        "performance_optimized": true
-      },
-      "error_message": null
+      "gate_name": "Performance Benchmark",
+      "status": "WARNING",
+      "score": 0.7632303806453816,
+      "details": "Performance acceptable: 4/4 thresholds met",
+      "execution_time": 0.009993742999995447,
+      "metrics": {
+        "avg_response_time_ms": 61.93635185726449,
+        "p95_response_time_ms": 150.2896456840803,
+        "throughput_ops_sec": 167.48507811811777,
+        "memory_usage_mb": 229.8992807732303,
+        "cpu_usage_percent": 40.51707917797902,
+        "scalability_factor": 0.7307846671168331,
+        "thresholds_met": 4,
+        "total_thresholds": 4,
+        "response_time_score": 0.6903182407136775,
+        "throughput_score": 1.0,
+        "resource_usage_score": 0.631818614751016,
+        "scalability_score": 0.7307846671168331
+      }
     },
     {
-      "name": "Security Validation",
-      "passed": true,
-      "score": 95.0,
-      "execution_time": 1.0967254638671875e-05,
-      "details": {
-        "security_checks": [
-          "XSS protection",
-          "SQL injection protection",
-          "Rate limiting",
-          "Input validation",
-          "Session management"
-        ],
-        "checks_passed": 5,
-        "threat_detection": true,
-        "access_control": true
-      },
-      "error_message": null
-    },
-    {
-      "name": "Performance Benchmarks",
-      "passed": true,
-      "score": 99.8785,
-      "execution_time": 1.8358230590820312e-05,
-      "details": {
-        "throughput_ops_sec": 16781.2,
-        "avg_latency_ms": 2.43,
-        "throughput_meets_threshold": true,
-        "latency_meets_threshold": true
-      },
-      "error_message": null
-    },
-    {
-      "name": "Integration Tests",
-      "passed": true,
-      "score": 90.0,
-      "execution_time": 1.3113021850585938e-05,
-      "details": {
-        "all_generations_passed": true,
-        "component_integration": true,
-        "cross_module_compatibility": true
-      },
-      "error_message": null
-    },
-    {
-      "name": "Code Quality Analysis",
-      "passed": true,
-      "score": 100.0,
-      "execution_time": 0.0061681270599365234,
-      "details": {
-        "total_python_files": 103,
-        "documented_files": 103,
-        "documentation_ratio": 1.0,
-        "code_structure": "modular"
-      },
-      "error_message": null
-    },
-    {
-      "name": "Production Readiness",
-      "passed": true,
-      "score": 100.0,
-      "execution_time": 1.3113021850585938e-05,
-      "details": {
-        "components": [
-          "Enhanced main entry point",
-          "Model service with caching",
-          "Security orchestration",
-          "Error recovery system",
-          "Health monitoring",
-          "Performance optimization"
-        ],
-        "passed_quality_gates": 7,
-        "total_quality_gates": 7,
-        "pass_rate": 100.0,
-        "production_ready": true
-      },
-      "error_message": null
+      "gate_name": "Documentation Compliance",
+      "status": "PASSED",
+      "score": 1.0,
+      "details": "Documentation complete and high quality",
+      "execution_time": 1.4905476829999316,
+      "metrics": {
+        "required_files_score": 1.0,
+        "code_documentation_score": 1.0,
+        "documentation_quality_score": 1.0,
+        "missing_required_files": 0,
+        "code_documentation_coverage": 0.8659770631886665,
+        "total_functions": 4447,
+        "documented_functions": 3851,
+        "documentation_word_count": 71619,
+        "documentation_sections": 6817
+      }
     }
   ],
   "recommendations": [
-    "System meets all quality requirements - ready for production"
-  ],
-  "timestamp": 1755039571.855881
+    "Consider increasing test coverage above 85%",
+    "Address security vulnerabilities and strengthen authentication",
+    "Monitor performance metrics and consider optimization"
+  ]
 }
