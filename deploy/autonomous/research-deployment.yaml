@@ -1,0 +1,531 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: quantum-mpc-research
+  labels:
+    app: quantum-mpc-transformer
+    tier: research
+    version: v0.3.0
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quantum-mpc-research-deployment
+  namespace: quantum-mpc-research
+  labels:
+    app: quantum-mpc-transformer
+    component: research-validation
+    version: v0.3.0
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: quantum-mpc-transformer
+      component: research-validation
+  template:
+    metadata:
+      labels:
+        app: quantum-mpc-transformer
+        component: research-validation
+        version: v0.3.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      serviceAccountName: quantum-mpc-service-account
+      
+      initContainers:
+      - name: dependency-checker
+        image: python:3.10-alpine
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Checking research dependencies..."
+          python3 -c "
+          import sys
+          try:
+              import numpy, scipy
+              print('✅ Core dependencies available')
+          except ImportError as e:
+              print(f'❌ Missing dependencies: {e}')
+              sys.exit(1)
+          "
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+      
+      containers:
+      - name: quantum-mpc-research
+        image: secure-mpc-transformer:v0.3.0-research
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - containerPort: 8080
+          name: api
+          protocol: TCP
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        
+        env:
+        - name: RESEARCH_MODE
+          value: "true"
+        - name: QUANTUM_OPTIMIZATION
+          value: "true"
+        - name: BENCHMARK_ENABLED
+          value: "true"
+        - name: STATISTICAL_VALIDATION
+          value: "true"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: PYTHONPATH
+          value: "/app/src"
+        
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+            ephemeral-storage: "1Gi"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+            ephemeral-storage: "5Gi"
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        volumeMounts:
+        - name: research-data
+          mountPath: /app/research_results
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: benchmark-cache
+          mountPath: /app/benchmark_cache
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+      
+      - name: metrics-exporter
+        image: prom/prometheus:latest
+        ports:
+        - containerPort: 9091
+          name: prom-metrics
+        
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+          readOnly: true
+      
+      volumes:
+      - name: research-data
+        persistentVolumeClaim:
+          claimName: research-data-pvc
+      
+      - name: config-volume
+        configMap:
+          name: quantum-mpc-config
+          items:
+          - key: research-config.yaml
+            path: research-config.yaml
+          - key: quantum-config.yaml
+            path: quantum-config.yaml
+      
+      - name: benchmark-cache
+        emptyDir:
+          sizeLimit: 2Gi
+      
+      - name: prometheus-config
+        configMap:
+          name: prometheus-research-config
+      
+      nodeSelector:
+        node-type: research-compute
+      
+      tolerations:
+      - key: "research-workload"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - quantum-mpc-transformer
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quantum-mpc-research-service
+  namespace: quantum-mpc-research
+  labels:
+    app: quantum-mpc-transformer
+    component: research-validation
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+spec:
+  type: LoadBalancer
+  selector:
+    app: quantum-mpc-transformer
+    component: research-validation
+  ports:
+  - name: api
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  sessionAffinity: ClientIP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: quantum-mpc-service-account
+  namespace: quantum-mpc-research
+  labels:
+    app: quantum-mpc-transformer
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: quantum-mpc-research-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: quantum-mpc-research-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: quantum-mpc-research-role
+subjects:
+- kind: ServiceAccount
+  name: quantum-mpc-service-account
+  namespace: quantum-mpc-research
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quantum-mpc-config
+  namespace: quantum-mpc-research
+data:
+  research-config.yaml: |
+    research:
+      experiments:
+        performance_comparison:
+          enabled: true
+          repetitions: 10
+          significance_level: 0.05
+        
+        scalability_analysis:
+          enabled: true
+          max_parties: 10
+          datasets: ["synthetic_small", "synthetic_medium", "synthetic_large"]
+        
+        security_validation:
+          enabled: true
+          security_levels: [128, 192, 256]
+          post_quantum: true
+        
+        convergence_analysis:
+          enabled: true
+          max_iterations: 500
+          convergence_threshold: 1e-6
+      
+      algorithms:
+        - classical_baseline
+        - quantum_vqe
+        - adaptive_quantum
+        - hybrid_quantum_classical
+        - post_quantum_secure
+      
+      metrics:
+        - latency_seconds
+        - throughput_ops_per_sec
+        - memory_mb
+        - accuracy_percentage
+        - security_score
+        - quantum_speedup_factor
+      
+      output:
+        save_results: true
+        generate_plots: true
+        statistical_analysis: true
+        publication_ready: true
+  
+  quantum-config.yaml: |
+    quantum:
+      optimization:
+        method: "variational_quantum"
+        depth: 6
+        entanglement_layers: 3
+        variational_steps: 100
+        learning_rate: 0.01
+        convergence_threshold: 1e-6
+      
+      security:
+        post_quantum: true
+        security_level: 128
+        malicious_secure: true
+        quantum_resistant: true
+      
+      performance:
+        enable_caching: true
+        adaptive_batching: true
+        gpu_acceleration: false  # Disable for research deployment
+        parallel_execution: true
+        max_workers: 4
+      
+      monitoring:
+        enable_metrics: true
+        quantum_state_tracking: true
+        convergence_monitoring: true
+        security_validation: true
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: research-data-pvc
+  namespace: quantum-mpc-research
+  labels:
+    app: quantum-mpc-transformer
+    component: research-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: research-validation-job
+  namespace: quantum-mpc-research
+  labels:
+    app: quantum-mpc-transformer
+    component: research-automation
+spec:
+  schedule: "0 2 * * *"  # Run daily at 2 AM
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 7200  # 2 hours timeout
+      
+      template:
+        metadata:
+          labels:
+            app: quantum-mpc-transformer
+            component: research-cron
+        spec:
+          restartPolicy: Never
+          serviceAccountName: quantum-mpc-service-account
+          
+          containers:
+          - name: research-runner
+            image: secure-mpc-transformer:v0.3.0-research
+            command: ["python3"]
+            args: ["/app/research_validation_demo.py", "--experiments", "all", "--output", "/app/research_results/daily"]
+            
+            env:
+            - name: PYTHONPATH
+              value: "/app/src"
+            - name: RESEARCH_MODE
+              value: "automated"
+            
+            resources:
+              requests:
+                memory: "4Gi"
+                cpu: "2000m"
+              limits:
+                memory: "16Gi"
+                cpu: "8000m"
+            
+            volumeMounts:
+            - name: research-data
+              mountPath: /app/research_results
+            - name: config-volume
+              mountPath: /app/config
+              readOnly: true
+          
+          volumes:
+          - name: research-data
+            persistentVolumeClaim:
+              claimName: research-data-pvc
+          - name: config-volume
+            configMap:
+              name: quantum-mpc-config
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: quantum-mpc-research-hpa
+  namespace: quantum-mpc-research
+  labels:
+    app: quantum-mpc-transformer
+    component: autoscaling
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: quantum-mpc-research-deployment
+  
+  minReplicas: 2
+  maxReplicas: 10
+  
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: quantum-mpc-research-network-policy
+  namespace: quantum-mpc-research
+spec:
+  podSelector:
+    matchLabels:
+      app: quantum-mpc-transformer
+  
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 9090
+  
+  egress:
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
