@@ -1,87 +1,171 @@
 {
-  "python.defaultInterpreterPath": "./venv/bin/python",
+  "python.defaultInterpreterPath": "/opt/conda/envs/mpc-dev/bin/python",
+  "python.terminal.activateEnvironment": true,
+  "python.terminal.activateEnvInCurrentTerminal": true,
+  
   "python.linting.enabled": true,
-  "python.linting.pylintEnabled": false,
-  "python.linting.flake8Enabled": false,
-  "python.linting.banditEnabled": true,
+  "python.linting.pylintEnabled": true,
+  "python.linting.flake8Enabled": true,
   "python.linting.mypyEnabled": true,
-  "python.formatting.provider": "black",
-  "python.formatting.blackArgs": ["--line-length", "88"],
-  "python.sortImports.args": ["--profile", "black"],
-  "python.testing.pytestEnabled": true,
-  "python.testing.unittestEnabled": false,
-  "python.testing.pytestArgs": [
-    "tests/",
-    "--cov=secure_mpc_transformer",
-    "--cov-report=html"
+  "python.linting.banditEnabled": true,
+  "python.linting.pylintArgs": [
+    "--load-plugins=pylint_django",
+    "--disable=C0114,C0115,C0116"
   ],
+  "python.linting.flake8Args": [
+    "--max-line-length=88",
+    "--extend-ignore=E203,W503"
+  ],
+  "python.linting.mypyArgs": [
+    "--ignore-missing-imports",
+    "--follow-imports=skip",
+    "--strict-optional"
+  ],
+  
+  "python.formatting.provider": "black",
+  "python.formatting.blackArgs": [
+    "--line-length=88"
+  ],
+  
+  "python.sortImports.args": [
+    "--profile=black",
+    "--line-length=88"
+  ],
+  
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": [
+    "tests/"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  
   "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
   "editor.codeActionsOnSave": {
     "source.organizeImports": true,
-    "source.fixAll.ruff": true
+    "source.fixAll": true
   },
+  "editor.rulers": [88],
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  
+  "files.associations": {
+    "*.cu": "cuda-cpp",
+    "*.cuh": "cuda-cpp",
+    "*.yml": "yaml",
+    "*.yaml": "yaml",
+    "Dockerfile*": "dockerfile",
+    "*.toml": "toml"
+  },
+  
   "files.exclude": {
     "**/__pycache__": true,
-    "**/*.pyc": true,
     "**/.pytest_cache": true,
     "**/.mypy_cache": true,
-    "**/.ruff_cache": true,
-    "**/htmlcov": true,
     "**/.coverage": true,
+    "**/htmlcov": true,
+    "**/*.egg-info": true,
     "**/build": true,
     "**/dist": true,
-    "**/*.egg-info": true,
+    "**/.tox": true,
     "**/models": true,
-    "**/checkpoints": true,
-    "**/benchmarks/results": true
-  },
-  "search.exclude": {
-    "**/.git": true,
+    "**/data": true,
     "**/.venv": true,
     "**/venv": true,
+    "**/node_modules": true
+  },
+  
+  "search.exclude": {
     "**/node_modules": true,
-    "**/htmlcov": true,
+    "**/bower_components": true,
+    "**/.venv": true,
+    "**/venv": true,
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/models": true,
+    "**/data": true,
+    "**/.git": true,
     "**/build": true,
     "**/dist": true
   },
-  "files.watcherExclude": {
-    "**/.git/objects/**": true,
-    "**/.git/subtree-cache/**": true,
-    "**/node_modules/**": true,
-    "**/.venv/**": true,
-    "**/venv/**": true,
-    "**/htmlcov/**": true
+  
+  "terminal.integrated.env.linux": {
+    "PYTHONPATH": "${workspaceFolder}/src",
+    "MPC_ENVIRONMENT": "development",
+    "MPC_DEBUG": "true",
+    "MPC_LOG_LEVEL": "DEBUG"
   },
-  "git.ignoreLimitWarning": true,
+  
+  "terminal.integrated.cwd": "${workspaceFolder}",
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "/bin/bash",
+      "icon": "terminal-bash"
+    },
+    "zsh": {
+      "path": "/bin/zsh",
+      "icon": "terminal"
+    }
+  },
+  "terminal.integrated.defaultProfile.linux": "bash",
+  
+  "git.enableCommitSigning": true,
+  "git.confirmSync": false,
+  "git.autofetch": true,
+  "git.enableSmartCommit": true,
+  
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  
+  "workbench.colorTheme": "Dark+ (default dark)",
+  "workbench.iconTheme": "vs-seti",
+  
+  "extensions.ignoreRecommendations": false,
+  
   "jupyter.askForKernelRestart": false,
-  "jupyter.runStartupCommands": [
-    "%load_ext autoreload",
-    "%autoreload 2"
-  ],
-  "extensions.recommendations": [
-    "ms-python.python",
-    "ms-python.vscode-pylance",
-    "ms-python.black-formatter",
-    "charliermarsh.ruff",
-    "ms-python.mypy-type-checker",
-    "ms-toolsai.jupyter",
-    "ms-vscode.cmake-tools",
-    "nvidia.nsight-vscode-edition",
-    "github.vscode-pull-request-github",
-    "ms-vscode.vscode-json",
-    "redhat.vscode-yaml",
-    "ms-vscode.docker"
-  ],
-  "cuda-gdb.nvcc.path": "/usr/local/cuda/bin/nvcc",
-  "C_Cpp.default.compilerPath": "/usr/local/cuda/bin/nvcc",
+  "jupyter.alwaysTrustNotebooks": true,
+  "jupyter.defaultKernel": "Python 3",
+  
   "cmake.configureOnOpen": false,
-  "docker.attachShellCommand.linuxContainer": "/bin/bash",
-  "markdown.extension.toc.levels": "2..6",
-  "yaml.schemas": {
-    "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml",
-    "https://json.schemastore.org/docker-compose.json": "docker-compose*.yml"
+  "C_Cpp.default.intelliSenseMode": "linux-gcc-x64",
+  "C_Cpp.default.cStandard": "c17",
+  "C_Cpp.default.cppStandard": "c++17",
+  "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+  
+  "cuda-cpp.intelliSenseMode": "linux-gcc-x64",
+  
+  "markdownlint.config": {
+    "MD013": false,
+    "MD033": false
   },
-  "emmet.includeLanguages": {
-    "markdown": "html"
-  }
+  
+  "cSpell.words": [
+    "adamw",
+    "argparse",
+    "asyncio",
+    "boto",
+    "cryptodome",
+    "cuda",
+    "cudnn",
+    "dataloader",
+    "embeddings",
+    "gmpy",
+    "huggingface",
+    "matplotlib",
+    "mlflow",
+    "mpc",
+    "numpy",
+    "onnx",
+    "pytorch",
+    "redis",
+    "scipy",
+    "seaborn",
+    "sympy",
+    "tensorboard",
+    "tensorflow",
+    "toml",
+    "transformers",
+    "wandb"
+  ]
 }

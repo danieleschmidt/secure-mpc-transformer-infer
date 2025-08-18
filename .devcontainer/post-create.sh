@@ -1,140 +1,64 @@
 #!/bin/bash
-# Post-create script for Secure MPC Transformer development container
+# Post-create script - runs after container creation and on-create
 
-set -e
+echo "🔧 Post-creation setup for Secure MPC Transformer..."
 
-echo "🚀 Setting up Secure MPC Transformer development environment..."
+# Activate conda environment
+source /opt/conda/etc/profile.d/conda.sh
+conda activate mpc-dev
 
-# Ensure we're in the workspace directory
-cd /workspace
+# Verify GPU access
+echo "🎮 Checking GPU access..."
+python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}'); print(f'CUDA devices: {torch.cuda.device_count()}')"
 
-# Install project dependencies
-echo "📦 Installing project dependencies..."
-if [ -f "pyproject.toml" ]; then
-    pip install -e ".[dev,gpu,benchmark]"
+# Run quick validation
+echo "✅ Running quick validation..."
+if [ -f scripts/validate-environment.py ]; then
+    python scripts/validate-environment.py
 else
-    echo "⚠️  pyproject.toml not found, skipping project installation"
+    echo "⚠️  Environment validation script not found"
 fi
 
-# Install pre-commit hooks
-echo "🔧 Installing pre-commit hooks..."
-if [ -f ".pre-commit-config.yaml" ]; then
-    pre-commit install
-    pre-commit install --hook-type commit-msg
-else
-    echo "⚠️  .pre-commit-config.yaml not found, skipping pre-commit setup"
+# Start background services if needed
+echo "🚀 Starting development services..."
+
+# Start Redis for development (if available)
+if command -v redis-server &> /dev/null; then
+    echo "📡 Starting Redis server..."
+    redis-server --daemonize yes --port 6379 --loglevel notice
 fi
 
-# Set up Jupyter Lab extensions and configuration
-echo "📊 Configuring Jupyter Lab..."
-jupyter lab --generate-config
-cat << 'EOF' >> ~/.jupyter/jupyter_lab_config.py
-c.ServerApp.ip = '0.0.0.0'
-c.ServerApp.port = 8888
-c.ServerApp.open_browser = False
-c.ServerApp.allow_root = True
-c.ServerApp.token = ''
-c.ServerApp.password = ''
-c.LabApp.default_url = '/lab'
-EOF
+# Generate development certificates if they don't exist
+if [ ! -f certs/server.crt ]; then
+    echo "🔐 Generating development certificates..."
+    mkdir -p certs
+    openssl req -x509 -newkey rsa:4096 -keyout certs/server.key -out certs/server.crt -days 365 -nodes \
+        -subj "/C=US/ST=Development/L=Development/O=SecureMPC/OU=Development/CN=localhost"
+    chmod 600 certs/server.key
+fi
 
-# Install useful Jupyter extensions
-pip install --no-cache-dir \
-    jupyterlab-git \
-    jupyterlab-lsp \
-    python-lsp-server[all] \
-    jupyter-ai
+# Set up Jupyter configuration
+echo "📓 Configuring Jupyter..."
+jupyter lab --generate-config --allow-root
+echo "c.ServerApp.ip = '0.0.0.0'" >> ~/.jupyter/jupyter_lab_config.py
+echo "c.ServerApp.port = 8888" >> ~/.jupyter/jupyter_lab_config.py
+echo "c.ServerApp.open_browser = False" >> ~/.jupyter/jupyter_lab_config.py
+echo "c.ServerApp.allow_root = True" >> ~/.jupyter/jupyter_lab_config.py
+echo "c.ServerApp.token = ''" >> ~/.jupyter/jupyter_lab_config.py
 
-# Create useful directories
-echo "📁 Creating development directories..."
-mkdir -p ~/.cache/pip
-mkdir -p ~/.cache/pre-commit
-mkdir -p ~/workspace/notebooks
-mkdir -p ~/workspace/experiments
-
-# Set up GPU monitoring script
-echo "🖥️  Setting up GPU monitoring..."
-cat << 'EOF' > ~/bin/gpu-monitor
-#!/bin/bash
-watch -n 1 nvidia-smi
-EOF
-chmod +x ~/bin/gpu-monitor
-
-# Create useful aliases
-echo "🔧 Setting up development aliases..."
-cat << 'EOF' >> ~/.bashrc
-# Development aliases
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
-alias ..='cd ..'
-alias ...='cd ../..'
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
-
-# Project-specific aliases
-alias pytest-fast='pytest -x -v'
-alias pytest-cov='pytest --cov=secure_mpc_transformer --cov-report=html'
-alias black-check='black --check --diff .'
-alias ruff-check='ruff check .'
-alias mypy-check='mypy src/'
-alias pre-commit-all='pre-commit run --all-files'
-
-# GPU aliases
-alias gpu='nvidia-smi'
-alias gpu-watch='watch -n 1 nvidia-smi'
-alias gpu-temp='nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits'
-
-# Docker aliases
-alias dps='docker ps'
-alias dpsa='docker ps -a'
-alias di='docker images'
-alias dip='docker image prune -f'
-alias dvp='docker volume prune -f'
-
-# Git aliases
-alias gs='git status'
-alias ga='git add'
-alias gc='git commit'
-alias gp='git push'
-alias gl='git log --oneline -10'
-alias gb='git branch'
-alias gco='git checkout'
-EOF
-
-# Also add to zsh
-cp ~/.bashrc ~/.zshrc
-
-# Set up development environment variables
-echo "🌍 Setting up environment variables..."
-cat << 'EOF' >> ~/.bashrc
-# Development environment
-export PYTHONPATH="/workspace/src:$PYTHONPATH"
-export CUDA_VISIBLE_DEVICES=all
-export NVIDIA_VISIBLE_DEVICES=all
-
-# MPC development settings
-export MPC_DEBUG=1
-export MPC_LOG_LEVEL=INFO
-export MPC_BACKEND=gpu
-
-# Jupyter settings
-export JUPYTER_ENABLE_LAB=yes
-EOF
-
-# Create a sample notebook
-echo "📓 Creating sample notebook..."
-cat << 'EOF' > ~/workspace/notebooks/mpc_development.ipynb
+# Create sample notebooks
+echo "📚 Creating sample notebooks..."
+mkdir -p notebooks
+cat > notebooks/Getting_Started.ipynb << 'NOTEBOOK'
 {
  "cells": [
   {
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# Secure MPC Transformer Development\n",
+    "# Secure MPC Transformer - Getting Started\n",
     "\n",
-    "This notebook provides a starting point for developing and testing MPC transformer inference."
+    "This notebook demonstrates basic usage of the Secure MPC Transformer system."
    ]
   },
   {
@@ -142,16 +66,46 @@ cat << 'EOF' > ~/workspace/notebooks/mpc_development.ipynb
    "execution_count": null,
    "metadata": {},
    "source": [
+    "# Import required libraries\n",
     "import torch\n",
-    "import numpy as np\n",
-    "from transformers import AutoTokenizer, AutoModel\n",
+    "from secure_mpc_transformer import SecureTransformer, SecurityConfig\n",
     "\n",
     "# Check GPU availability\n",
     "print(f\"CUDA available: {torch.cuda.is_available()}\")\n",
+    "print(f\"CUDA devices: {torch.cuda.device_count()}\")\n",
     "if torch.cuda.is_available():\n",
-    "    print(f\"GPU count: {torch.cuda.device_count()}\")\n",
-    "    print(f\"Current GPU: {torch.cuda.current_device()}\")\n",
-    "    print(f\"GPU name: {torch.cuda.get_device_name(0)}\")"
+    "    print(f\"Current device: {torch.cuda.current_device()}\")\n",
+    "    print(f\"Device name: {torch.cuda.get_device_name()}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "source": [
+    "# Configure security settings\n",
+    "config = SecurityConfig(\n",
+    "    protocol=\"3pc_semi_honest\",  # Use semi-honest for development\n",
+    "    security_level=128,\n",
+    "    gpu_acceleration=True,\n",
+    "    debug_mode=True\n",
+    ")\n",
+    "\n",
+    "print(f\"Security configuration: {config}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "source": [
+    "# Load a pre-trained model\n",
+    "model = SecureTransformer.from_pretrained(\n",
+    "    \"bert-base-uncased\",\n",
+    "    security_config=config\n",
+    ")\n",
+    "\n",
+    "print(\"Model loaded successfully!\")"
    ]
   }
  ],
@@ -160,78 +114,19 @@ cat << 'EOF' > ~/workspace/notebooks/mpc_development.ipynb
    "display_name": "Python 3",
    "language": "python",
    "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.10.0"
   }
  },
  "nbformat": 4,
  "nbformat_minor": 4
 }
-EOF
+NOTEBOOK
 
-# Set up shell completion
-echo "🔧 Setting up shell completion..."
-echo 'eval "$(_PYTEST_COMPLETE=bash_source pytest)"' >> ~/.bashrc
-
-# Create development scripts
-echo "📜 Creating development scripts..."
-mkdir -p ~/bin
-
-cat << 'EOF' > ~/bin/dev-setup
-#!/bin/bash
-# Quick development environment setup
-cd /workspace
-conda activate mpc-transformer
-export PYTHONPATH="/workspace/src:$PYTHONPATH"
-echo "🚀 Development environment ready!"
-echo "📁 Working directory: $(pwd)"
-echo "🐍 Python: $(which python)"
-echo "📦 Pip packages: $(pip list | wc -l) installed"
-if command -v nvidia-smi >/dev/null 2>&1; then
-    echo "🖥️  GPU: $(nvidia-smi --query-gpu=name --format=csv,noheader,nounits | head -1)"
-fi
-EOF
-
-cat << 'EOF' > ~/bin/run-tests
-#!/bin/bash
-# Run comprehensive test suite
-cd /workspace
-echo "🧪 Running test suite..."
-pytest tests/ -v --cov=secure_mpc_transformer --cov-report=html --cov-report=term
-echo "📊 Coverage report generated in htmlcov/"
-EOF
-
-cat << 'EOF' > ~/bin/benchmark
-#!/bin/bash
-# Run performance benchmarks
-cd /workspace
-echo "⚡ Running performance benchmarks..."
-python benchmarks/run_all.py --gpu --models bert-base
-EOF
-
-chmod +x ~/bin/*
-
-# Final setup
-echo "✅ Post-create setup complete!"
+echo "🎉 Post-creation setup complete!"
 echo ""
-echo "🔧 Available commands:"
-echo "  dev-setup     - Initialize development environment"
-echo "  run-tests     - Run comprehensive test suite"
-echo "  benchmark     - Run performance benchmarks"
-echo "  gpu-monitor   - Monitor GPU usage"
+echo "🚀 Quick start commands:"
+echo "  mpc-validate    - Validate environment"
+echo "  mpc-test-fast   - Run fast tests"
+echo "  mpc-serve       - Start API server"
+echo "  jupyter lab     - Start Jupyter Lab"
 echo ""
-echo "📊 Access Jupyter Lab at: http://localhost:8888"
-echo "📈 Access Grafana at: http://localhost:3000 (admin/admin)"
-echo "🔍 Access Prometheus at: http://localhost:9090"
-echo ""
-echo "🚀 Happy coding!"
+echo "📖 Open notebooks/Getting_Started.ipynb to begin!"
