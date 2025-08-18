@@ -2,10 +2,10 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Format Code",
+      "label": "Install Dependencies",
       "type": "shell",
-      "command": "black",
-      "args": ["src/", "tests/"],
+      "command": "pip",
+      "args": ["install", "-e", ".[dev,gpu,quantum-planning,test]"],
       "group": "build",
       "presentation": {
         "echo": true,
@@ -16,11 +16,81 @@
       "problemMatcher": []
     },
     {
-      "label": "Lint Code", 
+      "label": "Run Tests",
       "type": "shell",
-      "command": "ruff",
-      "args": ["check", "src/", "tests/", "--fix"],
+      "command": "pytest",
+      "args": ["tests/", "-v"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Fast Tests",
+      "type": "shell",
+      "command": "pytest",
+      "args": ["tests/", "-v", "-m", "not slow"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Security Tests",
+      "type": "shell",
+      "command": "pytest",
+      "args": ["tests/security/", "-v"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Format Code",
+      "type": "shell",
+      "command": "black",
+      "args": ["src/", "tests/"],
       "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Sort Imports",
+      "type": "shell",
+      "command": "isort",
+      "args": ["src/", "tests/", "--profile", "black"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint Code",
+      "type": "shell",
+      "command": "pylint",
+      "args": ["src/"],
+      "group": "test",
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -31,49 +101,9 @@
     },
     {
       "label": "Type Check",
-      "type": "shell", 
+      "type": "shell",
       "command": "mypy",
-      "args": ["src/", "--ignore-missing-imports"],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      },
-      "problemMatcher": ["$mypy"]
-    },
-    {
-      "label": "Run Tests",
-      "type": "shell",
-      "command": "pytest",
-      "args": [
-        "tests/",
-        "--cov=secure_mpc_transformer",
-        "--cov-report=html",
-        "--cov-report=term-missing"
-      ],
-      "group": {
-        "kind": "test",
-        "isDefault": true
-      },
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Run GPU Tests",
-      "type": "shell",
-      "command": "pytest",
-      "args": [
-        "tests/integration/",
-        "--gpu",
-        "-v"
-      ],
+      "args": ["src/"],
       "group": "test",
       "presentation": {
         "echo": true,
@@ -87,8 +117,8 @@
       "label": "Security Scan",
       "type": "shell",
       "command": "bandit",
-      "args": ["-r", "src/", "-f", "json", "-o", "bandit-report.json"],
-      "group": "build",
+      "args": ["-r", "src/", "-ll"],
+      "group": "test",
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -98,11 +128,87 @@
       "problemMatcher": []
     },
     {
-      "label": "Build Package",
+      "label": "Full Code Quality Check",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Format Code",
+        "Sort Imports",
+        "Lint Code",
+        "Type Check",
+        "Security Scan"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Start API Server",
       "type": "shell",
       "command": "python",
-      "args": ["-m", "build"],
+      "args": ["-m", "secure_mpc_transformer.server", "--debug"],
       "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Start Jupyter Lab",
+      "type": "shell",
+      "command": "jupyter",
+      "args": ["lab", "--ip=0.0.0.0", "--port=8888", "--allow-root", "--no-browser"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Benchmarks",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "secure_mpc_transformer.benchmark", "--quick"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Security Audit",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "secure_mpc_transformer.security.audit"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Validate Installation",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "secure_mpc_transformer.validate"],
+      "group": "test",
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -115,10 +221,7 @@
       "label": "Build CUDA Kernels",
       "type": "shell",
       "command": "make",
-      "args": ["clean", "&&", "make", "all"],
-      "options": {
-        "cwd": "${workspaceFolder}/kernels/cuda"
-      },
+      "args": ["-C", "kernels/cuda", "all"],
       "group": "build",
       "presentation": {
         "echo": true,
@@ -129,51 +232,24 @@
       "problemMatcher": ["$gcc"]
     },
     {
-      "label": "Run Benchmark",
+      "label": "Clean Build",
       "type": "shell",
-      "command": "python",
-      "args": [
-        "benchmarks/benchmark_bert.py",
-        "--model", "bert-base-uncased",
-        "--batch-size", "1",
-        "--iterations", "10"
-      ],
-      "group": "test",
+      "command": "make",
+      "args": ["clean"],
+      "group": "build",
       "presentation": {
         "echo": true,
-        "reveal": "always",
+        "reveal": "silent",
         "focus": false,
         "panel": "shared"
       },
       "problemMatcher": []
     },
     {
-      "label": "Pre-commit All",
+      "label": "Generate Documentation",
       "type": "shell",
-      "command": "pre-commit",
-      "args": ["run", "--all-files"],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Docker Build CPU",
-      "type": "shell",
-      "command": "docker",
-      "args": [
-        "build",
-        "-f", "docker/Dockerfile.cpu",
-        "-t", "mpc-transformer:cpu",
-        "."
-      ],
+      "command": "sphinx-build",
+      "args": ["-b", "html", "docs/", "docs/_build/"],
       "group": "build",
       "presentation": {
         "echo": true,
@@ -184,22 +260,18 @@
       "problemMatcher": []
     },
     {
-      "label": "Docker Build GPU", 
+      "label": "Watch GPU Usage",
       "type": "shell",
-      "command": "docker",
-      "args": [
-        "build",
-        "-f", "docker/Dockerfile.gpu", 
-        "-t", "mpc-transformer:gpu",
-        "."
-      ],
+      "command": "watch",
+      "args": ["-n", "1", "nvidia-smi"],
       "group": "build",
       "presentation": {
         "echo": true,
         "reveal": "always",
         "focus": false,
-        "panel": "shared"
+        "panel": "dedicated"
       },
+      "isBackground": true,
       "problemMatcher": []
     }
   ]

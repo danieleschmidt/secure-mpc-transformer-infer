@@ -1,0 +1,248 @@
+# Comprehensive test configuration for Secure MPC Transformer
+
+# General test settings
+general:
+  default_timeout: 300  # seconds
+  max_retries: 3
+  parallel_workers: 4
+  memory_limit_mb: 8192
+  temp_dir: "/tmp/mpc_tests"
+  log_level: "DEBUG"
+
+# Test categories and their configurations
+test_categories:
+  unit:
+    timeout: 60
+    coverage_threshold: 90
+    max_failures: 5
+    parallel: true
+    markers: ["unit", "not slow", "not gpu"]
+    
+  integration:
+    timeout: 300
+    coverage_threshold: 80
+    max_failures: 3
+    parallel: false
+    markers: ["integration"]
+    setup_delay: 5  # seconds
+    
+  security:
+    timeout: 600
+    coverage_threshold: 95
+    max_failures: 1
+    parallel: false
+    markers: ["security"]
+    strict_mode: true
+    
+  performance:
+    timeout: 900
+    iterations: 10
+    warmup_iterations: 3
+    acceptable_variance: 0.15  # 15%
+    markers: ["performance", "benchmark"]
+    memory_monitoring: true
+    
+  gpu:
+    timeout: 300
+    memory_limit_mb: 16384
+    cuda_device: 0
+    markers: ["gpu"]
+    cleanup_gpu_memory: true
+    
+  e2e:
+    timeout: 1200
+    max_failures: 1
+    setup_timeout: 60
+    teardown_timeout: 30
+    markers: ["e2e"]
+
+# Model configurations for testing
+models:
+  bert-base:
+    name: "bert-base-uncased"
+    hidden_size: 768
+    num_attention_heads: 12
+    num_hidden_layers: 12
+    vocab_size: 30522
+    max_position_embeddings: 512
+    test_input_length: 128
+    
+  distilbert:
+    name: "distilbert-base-uncased"
+    hidden_size: 768
+    num_attention_heads: 12
+    num_hidden_layers: 6
+    vocab_size: 30522
+    max_position_embeddings: 512
+    test_input_length: 128
+    
+  roberta-base:
+    name: "roberta-base"
+    hidden_size: 768
+    num_attention_heads: 12
+    num_hidden_layers: 12
+    vocab_size: 50265
+    max_position_embeddings: 512
+    test_input_length: 128
+
+# MPC protocol configurations
+protocols:
+  semi_honest_3pc:
+    name: "3pc_semi_honest"
+    num_parties: 3
+    security_level: 128
+    malicious_secure: false
+    preprocessing: true
+    
+  malicious_3pc:
+    name: "3pc_malicious"
+    num_parties: 3
+    security_level: 128
+    malicious_secure: true
+    preprocessing: true
+    verification_rounds: 3
+    
+  aby3:
+    name: "aby3"
+    num_parties: 3
+    security_level: 128
+    malicious_secure: true
+    preprocessing: false
+
+# Security test configurations
+security_tests:
+  timing_attacks:
+    num_samples: 1000
+    threshold_ms: 0.1
+    acceptable_variance: 0.05
+    
+  side_channel:
+    power_analysis: true
+    electromagnetic_analysis: true
+    cache_timing: true
+    
+  input_validation:
+    max_input_length: 10000
+    test_overflow: true
+    test_injection: true
+    test_encoding: true
+    
+  cryptographic:
+    test_key_generation: true
+    test_encryption_decryption: true
+    test_signature_verification: true
+    test_random_number_quality: true
+
+# Performance benchmarks
+benchmarks:
+  inference:
+    batch_sizes: [1, 4, 8, 16, 32]
+    sequence_lengths: [64, 128, 256, 512]
+    target_latency_ms:
+      cpu: 5000
+      gpu: 500
+    target_throughput_qps:
+      cpu: 0.2
+      gpu: 2.0
+      
+  memory_usage:
+    max_memory_mb:
+      cpu: 4096
+      gpu: 8192
+    memory_efficiency_threshold: 0.8
+    
+  scalability:
+    max_parties: 10
+    max_model_size_mb: 2048
+    network_bandwidth_mbps: 100
+
+# Network test configurations
+network:
+  latency_simulation:
+    min_latency_ms: 1
+    max_latency_ms: 100
+    packet_loss_rate: 0.01
+    
+  fault_tolerance:
+    party_failure_rate: 0.1
+    network_partition_rate: 0.05
+    message_corruption_rate: 0.001
+    
+  load_testing:
+    max_concurrent_connections: 100
+    message_rate_per_second: 1000
+    test_duration_seconds: 300
+
+# Data generation settings
+data_generation:
+  text:
+    vocab_size: 30522
+    max_sequence_length: 512
+    languages: ["en"]
+    
+  crypto:
+    key_sizes: [128, 192, 256]
+    curve_types: ["secp256r1", "ed25519"]
+    
+  synthetic:
+    num_samples: 10000
+    distribution: "normal"
+    noise_level: 0.1
+
+# Test environment settings
+environment:
+  docker:
+    enabled: true
+    image: "secure-mpc-transformer:test"
+    network_mode: "bridge"
+    
+  kubernetes:
+    enabled: false
+    namespace: "mpc-test"
+    
+  ci_cd:
+    github_actions: true
+    parallel_jobs: 4
+    artifact_retention_days: 7
+
+# Reporting and monitoring
+reporting:
+  formats: ["html", "xml", "json"]
+  coverage_report: true
+  performance_report: true
+  security_report: true
+  
+  notifications:
+    slack_webhook: null
+    email_recipients: []
+    
+  artifacts:
+    save_logs: true
+    save_screenshots: false
+    save_core_dumps: true
+
+# Test data paths
+data_paths:
+  fixtures: "tests/fixtures/"
+  samples: "tests/data/samples/"
+  expected_outputs: "tests/data/expected/"
+  temporary: "/tmp/mpc_test_data/"
+
+# Quality gates
+quality_gates:
+  coverage:
+    line_coverage: 85
+    branch_coverage: 80
+    function_coverage: 90
+    
+  performance:
+    regression_threshold: 0.1  # 10% slowdown
+    memory_regression_threshold: 0.2  # 20% increase
+    
+  security:
+    vulnerability_threshold: 0  # No vulnerabilities allowed
+    license_compliance: true
+    
+  stability:
+    flaky_test_threshold: 0.05  # 5% flakiness
+    success_rate_threshold: 0.95  # 95% success rate

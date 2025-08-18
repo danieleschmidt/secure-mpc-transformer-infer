@@ -1,161 +1,148 @@
-# Development container for Secure MPC Transformer Inference
-ARG UBUNTU_VERSION=22.04
-ARG CUDA_VERSION=12.1
-ARG PYTHON_VERSION=3.10
+# Secure MPC Transformer Development Container
+# Based on NVIDIA CUDA with Python development tools
 
-FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION}
+ARG VARIANT=3.10-bullseye
+ARG CUDA_VERSION=12.0
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04
 
-# Build arguments
+# Avoid warnings by switching to noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Configure apt and install packages
+RUN apt-get update \
+    && apt-get -y install --no-install-recommends apt-utils dialog 2>&1 \
+    #
+    # Verify git, process tools, lsb-release (common in install instructions for CLIs) installed
+    && apt-get -y install git openssh-client less iproute2 procps lsb-release \
+    #
+    # Install C++ tools for CUDA development
+    && apt-get -y install build-essential cmake gdb ninja-build \
+    #
+    # Install Python and pip
+    && apt-get -y install python3 python3-pip python3-dev python3-venv \
+    #
+    # Install additional development tools
+    && apt-get -y install curl wget vim nano htop tree jq \
+    #
+    # Install cryptographic libraries
+    && apt-get -y install libssl-dev libffi-dev \
+    #
+    # Install mathematical libraries
+    && apt-get -y install libblas-dev liblapack-dev libatlas-base-dev \
+    #
+    # Install networking tools
+    && apt-get -y install netcat-openbsd telnet \
+    #
+    # Clean up
+    && apt-get autoremove -y \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Switch back to dialog for any ad-hoc use of apt-get
+ENV DEBIAN_FRONTEND=dialog
+
+# Install Miniconda
+ENV CONDA_DIR=/opt/conda
+ENV PATH=$CONDA_DIR/bin:$PATH
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh \
+    && /bin/bash /tmp/miniconda.sh -b -p $CONDA_DIR \
+    && rm /tmp/miniconda.sh \
+    && $CONDA_DIR/bin/conda clean -tipsy
+
+# Create conda environment for development
+RUN conda create -n mpc-dev python=3.10 -y \
+    && conda activate mpc-dev \
+    && conda install -c conda-forge \
+        numpy scipy matplotlib seaborn \
+        jupyter jupyterlab \
+        pytest pytest-cov pytest-xdist \
+        black isort flake8 mypy pylint bandit \
+        pre-commit \
+        -y
+
+# Install PyTorch with CUDA support
+RUN conda activate mpc-dev \
+    && conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia -y
+
+# Install additional Python packages for MPC development
+RUN conda activate mpc-dev \
+    && pip install --no-cache-dir \
+        transformers \
+        datasets \
+        accelerate \
+        wandb \
+        mlflow \
+        prometheus-client \
+        redis \
+        sqlalchemy \
+        alembic \
+        fastapi \
+        uvicorn \
+        pydantic \
+        cryptography \
+        pycryptodome \
+        gmpy2 \
+        sympy
+
+# Install development and testing tools
+RUN conda activate mpc-dev \
+    && pip install --no-cache-dir \
+        pytest-benchmark \
+        pytest-mock \
+        pytest-asyncio \
+        coverage \
+        codecov \
+        memory-profiler \
+        line-profiler \
+        py-spy \
+        scalene
+
+# Install CUDA development tools
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=$CUDA_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+
+# Install additional CUDA libraries for MPC
+RUN apt-get update \
+    && apt-get -y install --no-install-recommends \
+        libcudnn8-dev \
+        libcublas-dev \
+        libcurand-dev \
+        libcusparse-dev \
+        libcusolver-dev \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user to use if preferred
 ARG USERNAME=vscode
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
-ARG PYTHON_VERSION
 
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV CUDA_HOME=/usr/local/cuda
-ENV PATH=${CUDA_HOME}/bin:${PATH}
-ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    # Basic development tools
-    build-essential \
-    cmake \
-    git \
-    curl \
-    wget \
-    unzip \
-    vim \
-    nano \
-    sudo \
-    # Network tools
-    net-tools \
-    iputils-ping \
-    # SSL/TLS support
-    ca-certificates \
-    # Additional development tools
-    gdb \
-    valgrind \
-    htop \
-    tree \
-    jq \
-    # Docker CLI (for docker-outside-of-docker)
-    apt-transport-https \
-    gnupg \
-    lsb-release \
-    # Protocol buffer compiler
-    protobuf-compiler \
-    libprotobuf-dev \
-    # OpenSSL development headers
-    libssl-dev \
-    libffi-dev \
-    # For building Python extensions
-    pkg-config \
-    # Cleanup
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Docker CLI
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
-    && apt-get update \
-    && apt-get install -y docker-ce-cli docker-compose-plugin \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create the user
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && apt-get update \
+    && apt-get install -y sudo \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 
-# Install Miniconda
+# Set up shell for the user
+RUN usermod --shell /bin/bash $USERNAME
+
+# Configure git for the user
 USER $USERNAME
-WORKDIR /home/$USERNAME
-
-RUN wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh \
-    && bash miniconda.sh -b -p /home/$USERNAME/miniconda3 \
-    && rm miniconda.sh \
-    && echo 'export PATH="/home/$USERNAME/miniconda3/bin:$PATH"' >> ~/.bashrc
-
-ENV PATH="/home/$USERNAME/miniconda3/bin:$PATH"
-
-# Create conda environment
-RUN conda create -y -n mpc-transformer python=${PYTHON_VERSION} \
-    && echo "conda activate mpc-transformer" >> ~/.bashrc
-
-# Switch to the conda environment
-SHELL ["conda", "run", "-n", "mpc-transformer", "/bin/bash", "-c"]
-
-# Install Python development dependencies
-RUN pip install --no-cache-dir \
-    # Core development tools
-    ipython \
-    jupyter \
-    jupyterlab \
-    notebook \
-    # Code quality
-    pre-commit \
-    black \
-    isort \
-    ruff \
-    mypy \
-    pytest \
-    pytest-cov \
-    pytest-xdist \
-    # Security scanning
-    bandit \
-    safety \
-    # Documentation
-    sphinx \
-    sphinx-rtd-theme \
-    mkdocs \
-    mkdocs-material \
-    # Debugging and profiling
-    pdb \
-    line_profiler \
-    memory_profiler \
-    # Additional utilities
-    rich \
-    typer \
-    httpx \
-    pydantic
-
-# Install CUDA-specific Python packages
-RUN pip install --no-cache-dir \
-    cupy-cuda12x \
-    numba \
-    triton
-
-# Install cryptography and MPC libraries (development versions)
-RUN pip install --no-cache-dir \
-    cryptography \
-    pycryptodome \
-    # Note: SEAL and TenSEAL would be installed via project requirements
-
-# Configure Git (will be overridden by mounted config)
 RUN git config --global init.defaultBranch main \
-    && git config --global core.editor nano \
     && git config --global pull.rebase false
 
-# Install Oh My Zsh
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
-    && echo 'export PATH="/home/$USERNAME/miniconda3/bin:$PATH"' >> ~/.zshrc \
-    && echo 'conda activate mpc-transformer' >> ~/.zshrc
+# Set up conda for the user
+RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc \
+    && echo "conda activate mpc-dev" >> ~/.bashrc
 
-# Set up workspace directory
+# Create workspace directory
 RUN mkdir -p /workspace
 WORKDIR /workspace
 
-# Expose common development ports
-EXPOSE 8080 8888 9090 3000 50051 6006
-
-# Switch back to root to set up the entrypoint
-USER root
-
-# Create startup scripts directory
-RUN mkdir -p /usr/local/share/docker-init.d
+# Expose common ports
+EXPOSE 8080 8001 8002 8003 9090 3000 6379 5432 8888 6006
 
 # Set the default command
-CMD ["sleep", "infinity"]
+CMD ["/bin/bash"]

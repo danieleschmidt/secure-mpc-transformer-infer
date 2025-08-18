@@ -2,105 +2,123 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Current File",
+      "name": "Debug API Server",
+      "type": "python",
+      "request": "launch",
+      "module": "secure_mpc_transformer.server",
+      "args": ["--debug", "--port", "8080"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "MPC_ENVIRONMENT": "development",
+        "MPC_DEBUG": "true",
+        "MPC_LOG_LEVEL": "DEBUG",
+        "PYTHONPATH": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "name": "Debug MPC Party",
+      "type": "python",
+      "request": "launch",
+      "module": "secure_mpc_transformer.party",
+      "args": ["--party-id", "0", "--debug"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "MPC_ENVIRONMENT": "development",
+        "MPC_DEBUG": "true",
+        "MPC_LOG_LEVEL": "DEBUG",
+        "PYTHONPATH": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "name": "Debug Main Demo",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "args": ["--debug"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "MPC_ENVIRONMENT": "development",
+        "MPC_DEBUG": "true",
+        "MPC_LOG_LEVEL": "DEBUG",
+        "PYTHONPATH": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "name": "Debug Tests",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["tests/", "-v", "--tb=short"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "MPC_ENVIRONMENT": "testing",
+        "MPC_DEBUG": "true",
+        "MPC_LOG_LEVEL": "DEBUG",
+        "PYTHONPATH": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "name": "Debug Specific Test",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["${file}", "-v", "--tb=short"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "MPC_ENVIRONMENT": "testing",
+        "MPC_DEBUG": "true",
+        "MPC_LOG_LEVEL": "DEBUG",
+        "PYTHONPATH": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "name": "Debug Benchmark",
+      "type": "python",
+      "request": "launch",
+      "module": "secure_mpc_transformer.benchmark",
+      "args": ["--debug", "--quick"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "MPC_ENVIRONMENT": "development",
+        "MPC_DEBUG": "true",
+        "MPC_LOG_LEVEL": "DEBUG",
+        "PYTHONPATH": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "name": "Debug Security Audit",
+      "type": "python",
+      "request": "launch",
+      "module": "secure_mpc_transformer.security.audit",
+      "args": ["--debug"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "MPC_ENVIRONMENT": "development",
+        "MPC_DEBUG": "true",
+        "MPC_LOG_LEVEL": "DEBUG",
+        "PYTHONPATH": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "name": "Debug Current File",
       "type": "python",
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      "justMyCode": true,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/src"
-      }
-    },
-    {
-      "name": "Python: Module",
-      "type": "python",
-      "request": "launch",
-      "module": "secure_mpc_transformer",
-      "console": "integratedTerminal",
-      "justMyCode": true,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/src"
-      }
-    },
-    {
-      "name": "Python: Tests",
-      "type": "python",
-      "request": "launch",
-      "module": "pytest",
-      "args": [
-        "tests/",
-        "-v",
-        "--tb=short"
-      ],
-      "console": "integratedTerminal",
       "justMyCode": false,
       "env": {
+        "MPC_ENVIRONMENT": "development",
+        "MPC_DEBUG": "true",
+        "MPC_LOG_LEVEL": "DEBUG",
         "PYTHONPATH": "${workspaceFolder}/src"
       }
-    },
-    {
-      "name": "Python: GPU Tests",
-      "type": "python",
-      "request": "launch",
-      "module": "pytest",
-      "args": [
-        "tests/integration/",
-        "--gpu",
-        "-v",
-        "--tb=short"
-      ],
-      "console": "integratedTerminal",
-      "justMyCode": false,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/src",
-        "CUDA_VISIBLE_DEVICES": "0"
-      }
-    },
-    {
-      "name": "Python: Benchmark",
-      "type": "python",
-      "request": "launch",
-      "program": "${workspaceFolder}/benchmarks/benchmark_bert.py",
-      "args": [
-        "--model", "bert-base-uncased",
-        "--batch-size", "1",
-        "--iterations", "10"
-      ],
-      "console": "integratedTerminal",
-      "justMyCode": true,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/src",
-        "CUDA_VISIBLE_DEVICES": "0"
-      }
-    },
-    {
-      "name": "Python: MPC Protocol Debug",
-      "type": "python",
-      "request": "launch",
-      "program": "${workspaceFolder}/examples/debug_protocol.py",
-      "console": "integratedTerminal",
-      "justMyCode": false,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/src",
-        "MPC_DEBUG": "1",
-        "MPC_TRACE_PROTOCOL": "1"
-      }
-    },
-    {
-      "name": "Attach to Remote Process",
-      "type": "python",
-      "request": "attach",
-      "connect": {
-        "host": "localhost",
-        "port": 5678
-      },
-      "pathMappings": [
-        {
-          "localRoot": "${workspaceFolder}",
-          "remoteRoot": "/workspace"
-        }
-      ]
     }
   ]
 }
