@@ -3,16 +3,16 @@
 from .autonomous_scaler import (
     AutonomousScaler,
     ResourceMetrics,
+    ResourceType,
     ScalingConfig,
     ScalingDirection,
-    ResourceType,
-    ScalingEvent
+    ScalingEvent,
 )
 
 __all__ = [
     "AutonomousScaler",
     "ResourceMetrics",
-    "ScalingConfig", 
+    "ScalingConfig",
     "ScalingDirection",
     "ResourceType",
     "ScalingEvent"

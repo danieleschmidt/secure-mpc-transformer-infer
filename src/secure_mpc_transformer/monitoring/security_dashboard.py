@@ -7,22 +7,23 @@ visualization, attack vector analysis, and security control effectiveness tracki
 """
 
 import asyncio
-import time
 import json
 import logging
-from typing import Dict, Any, List, Optional, Tuple, Union
-from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
+import time
 from collections import defaultdict, deque
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from enum import Enum
+from typing import Any
 
 import numpy as np
 
-from ..utils.error_handling import SecurityError
-from ..utils.metrics import MetricsCollector
 from ..security.enhanced_validator import ValidationResult
+from ..security.incident_response import (
+    IncidentSeverity,
+    SecurityIncident,
+)
 from ..security.quantum_monitor import QuantumSecurityEvent, QuantumThreatLevel
-from ..security.incident_response import SecurityIncident, IncidentSeverity, ThreatCategory
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +48,11 @@ class MetricType(Enum):
 class SecurityMetric:
     """Individual security metric data."""
     name: str
-    value: Union[int, float]
+    value: int | float
     metric_type: MetricType
     timestamp: datetime
-    labels: Dict[str, str] = field(default_factory=dict)
-    threshold: Optional[float] = None
+    labels: dict[str, str] = field(default_factory=dict)
+    threshold: float | None = None
     status: str = "normal"  # normal, warning, critical
     description: str = ""
 
@@ -60,12 +61,12 @@ class SecurityMetric:
 class ThreatLandscapeData:
     """Threat landscape visualization data."""
     timestamp: datetime
-    threat_categories: Dict[str, int]
-    severity_distribution: Dict[str, int]
-    attack_vectors: Dict[str, int]
-    geographic_distribution: Dict[str, int]
-    temporal_patterns: Dict[str, List[float]]
-    trending_threats: List[Dict[str, Any]]
+    threat_categories: dict[str, int]
+    severity_distribution: dict[str, int]
+    attack_vectors: dict[str, int]
+    geographic_distribution: dict[str, int]
+    temporal_patterns: dict[str, list[float]]
+    trending_threats: list[dict[str, Any]]
 
 
 @dataclass
@@ -83,27 +84,27 @@ class SecurityControlEffectiveness:
 
 class RealTimeMetricsCollector:
     """Real-time collection and aggregation of security metrics."""
-    
+
     def __init__(self):
         self.metrics_buffer = {}
         self.aggregated_metrics = {}
         self.time_series_data = defaultdict(lambda: deque(maxlen=1440))  # 24 hours at 1-min intervals
         self.alert_thresholds = {}
         self.metric_history = defaultdict(lambda: deque(maxlen=10000))
-        
+
     async def collect_security_metric(
-        self, 
-        metric_name: str, 
-        value: Union[int, float],
+        self,
+        metric_name: str,
+        value: int | float,
         metric_type: MetricType,
-        labels: Optional[Dict[str, str]] = None,
-        threshold: Optional[float] = None
+        labels: dict[str, str] | None = None,
+        threshold: float | None = None
     ) -> SecurityMetric:
         """Collect and store a security metric."""
         try:
             labels = labels or {}
             timestamp = datetime.now(timezone.utc)
-            
+
             # Determine metric status based on threshold
             status = "normal"
             if threshold is not None:
@@ -111,7 +112,7 @@ class RealTimeMetricsCollector:
                     status = "critical"
                 elif value > threshold * 0.8:  # 80% of threshold
                     status = "warning"
-            
+
             metric = SecurityMetric(
                 name=metric_name,
                 value=value,
@@ -121,23 +122,23 @@ class RealTimeMetricsCollector:
                 threshold=threshold,
                 status=status
             )
-            
+
             # Store in buffer for real-time access
             metric_key = f"{metric_name}_{hash(str(labels))}"
             self.metrics_buffer[metric_key] = metric
-            
+
             # Add to time series
             time_point = int(timestamp.timestamp() // 60) * 60  # Round to minute
             self.time_series_data[metric_key].append((time_point, value))
-            
+
             # Add to history
             self.metric_history[metric_key].append(metric)
-            
+
             # Update aggregated metrics
             await self._update_aggregated_metrics(metric)
-            
+
             return metric
-            
+
         except Exception as e:
             logger.error(f"Failed to collect security metric {metric_name}: {e}")
             return SecurityMetric(
@@ -147,55 +148,55 @@ class RealTimeMetricsCollector:
                 timestamp=datetime.now(timezone.utc),
                 status="error"
             )
-    
-    async def get_real_time_metrics(self, metric_pattern: Optional[str] = None) -> Dict[str, SecurityMetric]:
+
+    async def get_real_time_metrics(self, metric_pattern: str | None = None) -> dict[str, SecurityMetric]:
         """Get current real-time security metrics."""
         try:
             if metric_pattern:
-                return {k: v for k, v in self.metrics_buffer.items() 
+                return {k: v for k, v in self.metrics_buffer.items()
                        if metric_pattern in k}
             return self.metrics_buffer.copy()
-            
+
         except Exception as e:
             logger.error(f"Failed to get real-time metrics: {e}")
             return {}
-    
+
     async def get_time_series_data(
-        self, 
-        metric_name: str, 
+        self,
+        metric_name: str,
         duration_minutes: int = 60
-    ) -> List[Tuple[int, float]]:
+    ) -> list[tuple[int, float]]:
         """Get time series data for a specific metric."""
         try:
             current_time = time.time()
             cutoff_time = current_time - (duration_minutes * 60)
-            
+
             # Find all matching metric keys
-            matching_keys = [k for k in self.time_series_data.keys() 
+            matching_keys = [k for k in self.time_series_data.keys()
                            if metric_name in k]
-            
+
             if not matching_keys:
                 return []
-            
+
             # Use the first matching key
             metric_key = matching_keys[0]
             time_series = self.time_series_data[metric_key]
-            
+
             # Filter by time range
-            filtered_data = [(timestamp, value) for timestamp, value in time_series 
+            filtered_data = [(timestamp, value) for timestamp, value in time_series
                            if timestamp >= cutoff_time]
-            
+
             return filtered_data
-            
+
         except Exception as e:
             logger.error(f"Failed to get time series data for {metric_name}: {e}")
             return []
-    
+
     async def _update_aggregated_metrics(self, metric: SecurityMetric) -> None:
         """Update aggregated metrics based on new metric."""
         try:
             metric_base_name = metric.name.split('_')[0]  # Base metric name
-            
+
             if metric_base_name not in self.aggregated_metrics:
                 self.aggregated_metrics[metric_base_name] = {
                     "count": 0,
@@ -205,7 +206,7 @@ class RealTimeMetricsCollector:
                     "avg": 0.0,
                     "last_updated": metric.timestamp
                 }
-            
+
             agg = self.aggregated_metrics[metric_base_name]
             agg["count"] += 1
             agg["sum"] += metric.value
@@ -213,65 +214,65 @@ class RealTimeMetricsCollector:
             agg["max"] = max(agg["max"], metric.value)
             agg["avg"] = agg["sum"] / agg["count"]
             agg["last_updated"] = metric.timestamp
-            
+
         except Exception as e:
             logger.error(f"Failed to update aggregated metrics: {e}")
 
 
 class ThreatLandscapeAnalyzer:
     """Analyze and visualize the current threat landscape."""
-    
+
     def __init__(self):
         self.threat_data = deque(maxlen=1000)
         self.geographic_analyzer = GeographicThreatAnalyzer()
         self.temporal_analyzer = TemporalThreatAnalyzer()
         self.trend_analyzer = ThreatTrendAnalyzer()
-        
+
     async def analyze_threat_landscape(
-        self, 
-        incidents: List[SecurityIncident],
-        quantum_events: List[QuantumSecurityEvent]
+        self,
+        incidents: list[SecurityIncident],
+        quantum_events: list[QuantumSecurityEvent]
     ) -> ThreatLandscapeData:
         """Analyze current threat landscape from incidents and events."""
         try:
             timestamp = datetime.now(timezone.utc)
-            
+
             # Analyze threat categories
             threat_categories = {}
             for incident in incidents:
                 category = incident.category.value
                 threat_categories[category] = threat_categories.get(category, 0) + 1
-            
+
             # Analyze severity distribution
             severity_distribution = {}
             for incident in incidents:
                 severity = incident.severity.value
                 severity_distribution[severity] = severity_distribution.get(severity, 0) + 1
-            
+
             # Analyze attack vectors
             attack_vectors = {}
             for incident in incidents:
                 for indicator in incident.threat_indicators[:5]:  # Top 5 indicators
                     attack_vectors[indicator] = attack_vectors.get(indicator, 0) + 1
-            
+
             # Analyze quantum threats
             quantum_threat_levels = {}
             for event in quantum_events:
                 level = event.threat_level.value
                 quantum_threat_levels[f"quantum_{level}"] = quantum_threat_levels.get(f"quantum_{level}", 0) + 1
-            
+
             # Combine attack vectors
             attack_vectors.update(quantum_threat_levels)
-            
+
             # Geographic distribution
             geographic_distribution = await self.geographic_analyzer.analyze_geographic_threats(incidents)
-            
+
             # Temporal patterns
             temporal_patterns = await self.temporal_analyzer.analyze_temporal_patterns(incidents)
-            
+
             # Trending threats
             trending_threats = await self.trend_analyzer.identify_trending_threats(incidents)
-            
+
             landscape_data = ThreatLandscapeData(
                 timestamp=timestamp,
                 threat_categories=threat_categories,
@@ -281,12 +282,12 @@ class ThreatLandscapeAnalyzer:
                 temporal_patterns=temporal_patterns,
                 trending_threats=trending_threats
             )
-            
+
             # Store for historical analysis
             self.threat_data.append(landscape_data)
-            
+
             return landscape_data
-            
+
         except Exception as e:
             logger.error(f"Threat landscape analysis failed: {e}")
             return ThreatLandscapeData(
@@ -298,13 +299,13 @@ class ThreatLandscapeAnalyzer:
                 temporal_patterns={},
                 trending_threats=[]
             )
-    
-    async def get_historical_landscape_data(self, hours: int = 24) -> List[ThreatLandscapeData]:
+
+    async def get_historical_landscape_data(self, hours: int = 24) -> list[ThreatLandscapeData]:
         """Get historical threat landscape data."""
         try:
             cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
             return [data for data in self.threat_data if data.timestamp >= cutoff_time]
-            
+
         except Exception as e:
             logger.error(f"Failed to get historical landscape data: {e}")
             return []
@@ -312,17 +313,17 @@ class ThreatLandscapeAnalyzer:
 
 class GeographicThreatAnalyzer:
     """Analyze geographic distribution of threats."""
-    
-    async def analyze_geographic_threats(self, incidents: List[SecurityIncident]) -> Dict[str, int]:
+
+    async def analyze_geographic_threats(self, incidents: list[SecurityIncident]) -> dict[str, int]:
         """Analyze geographic distribution of threat sources."""
         try:
             geo_distribution = {}
-            
+
             for incident in incidents:
                 # Placeholder for IP geolocation
                 # In production, would use actual geolocation service
                 source_ip = incident.source_ip
-                
+
                 if source_ip.startswith("192.168.") or source_ip.startswith("10."):
                     country = "Private_Network"
                 elif source_ip.startswith("127."):
@@ -330,15 +331,15 @@ class GeographicThreatAnalyzer:
                 else:
                     # Simulate geolocation based on IP patterns
                     country = self._simulate_geolocation(source_ip)
-                
+
                 geo_distribution[country] = geo_distribution.get(country, 0) + 1
-            
+
             return geo_distribution
-            
+
         except Exception as e:
             logger.error(f"Geographic threat analysis failed: {e}")
             return {}
-    
+
     def _simulate_geolocation(self, ip: str) -> str:
         """Simulate IP geolocation for demonstration."""
         # Simple simulation based on IP hash
@@ -349,8 +350,8 @@ class GeographicThreatAnalyzer:
 
 class TemporalThreatAnalyzer:
     """Analyze temporal patterns in threats."""
-    
-    async def analyze_temporal_patterns(self, incidents: List[SecurityIncident]) -> Dict[str, List[float]]:
+
+    async def analyze_temporal_patterns(self, incidents: list[SecurityIncident]) -> dict[str, list[float]]:
         """Analyze temporal patterns in threat activity."""
         try:
             patterns = {
@@ -358,30 +359,30 @@ class TemporalThreatAnalyzer:
                 "daily": [0.0] * 7,
                 "monthly": [0.0] * 12
             }
-            
+
             for incident in incidents:
                 timestamp = incident.timestamp
-                
+
                 # Hourly pattern
                 hour = timestamp.hour
                 patterns["hourly"][hour] += 1.0
-                
+
                 # Daily pattern (0=Monday, 6=Sunday)
                 weekday = timestamp.weekday()
                 patterns["daily"][weekday] += 1.0
-                
+
                 # Monthly pattern
                 month = timestamp.month - 1  # 0-indexed
                 patterns["monthly"][month] += 1.0
-            
+
             # Normalize patterns
             for pattern_type, values in patterns.items():
                 total = sum(values)
                 if total > 0:
                     patterns[pattern_type] = [v / total for v in values]
-            
+
             return patterns
-            
+
         except Exception as e:
             logger.error(f"Temporal pattern analysis failed: {e}")
             return {"hourly": [], "daily": [], "monthly": []}
@@ -389,39 +390,39 @@ class TemporalThreatAnalyzer:
 
 class ThreatTrendAnalyzer:
     """Analyze trending threats and emerging patterns."""
-    
-    async def identify_trending_threats(self, incidents: List[SecurityIncident]) -> List[Dict[str, Any]]:
+
+    async def identify_trending_threats(self, incidents: list[SecurityIncident]) -> list[dict[str, Any]]:
         """Identify trending threats and attack patterns."""
         try:
             trending_threats = []
-            
+
             # Analyze recent vs historical threat patterns
             recent_cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
             older_cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-            
+
             recent_incidents = [i for i in incidents if i.timestamp >= recent_cutoff]
             historical_incidents = [i for i in incidents if older_cutoff <= i.timestamp < recent_cutoff]
-            
+
             # Count threat categories
             recent_categories = {}
             historical_categories = {}
-            
+
             for incident in recent_incidents:
                 category = incident.category.value
                 recent_categories[category] = recent_categories.get(category, 0) + 1
-            
+
             for incident in historical_incidents:
                 category = incident.category.value
                 historical_categories[category] = historical_categories.get(category, 0) + 1
-            
+
             # Calculate trend scores
             for category in recent_categories:
                 recent_count = recent_categories[category]
                 historical_count = historical_categories.get(category, 1)  # Avoid division by zero
-                
+
                 # Calculate growth rate
                 growth_rate = (recent_count - historical_count) / historical_count
-                
+
                 if growth_rate > 0.5:  # 50% increase is considered trending
                     trending_threats.append({
                         "category": category,
@@ -430,12 +431,12 @@ class ThreatTrendAnalyzer:
                         "growth_rate": growth_rate,
                         "trend_status": "increasing"
                     })
-            
+
             # Sort by growth rate
             trending_threats.sort(key=lambda x: x["growth_rate"], reverse=True)
-            
+
             return trending_threats[:10]  # Top 10 trending threats
-            
+
         except Exception as e:
             logger.error(f"Threat trend analysis failed: {e}")
             return []
@@ -443,42 +444,42 @@ class ThreatTrendAnalyzer:
 
 class SecurityControlAnalyzer:
     """Analyze effectiveness of security controls."""
-    
+
     def __init__(self):
         self.control_metrics = {}
         self.performance_history = defaultdict(lambda: deque(maxlen=1000))
-        
+
     async def analyze_control_effectiveness(
         self,
-        validation_results: List[ValidationResult],
-        incidents: List[SecurityIncident],
-        quantum_events: List[QuantumSecurityEvent]
-    ) -> List[SecurityControlEffectiveness]:
+        validation_results: list[ValidationResult],
+        incidents: list[SecurityIncident],
+        quantum_events: list[QuantumSecurityEvent]
+    ) -> list[SecurityControlEffectiveness]:
         """Analyze effectiveness of various security controls."""
         try:
             control_effectiveness = []
-            
+
             # Analyze validation system effectiveness
             validation_effectiveness = await self._analyze_validation_effectiveness(validation_results)
             control_effectiveness.append(validation_effectiveness)
-            
+
             # Analyze incident response effectiveness
             response_effectiveness = await self._analyze_incident_response_effectiveness(incidents)
             control_effectiveness.append(response_effectiveness)
-            
+
             # Analyze quantum monitoring effectiveness
             quantum_effectiveness = await self._analyze_quantum_monitoring_effectiveness(quantum_events)
             control_effectiveness.append(quantum_effectiveness)
-            
+
             return control_effectiveness
-            
+
         except Exception as e:
             logger.error(f"Control effectiveness analysis failed: {e}")
             return []
-    
+
     async def _analyze_validation_effectiveness(
-        self, 
-        validation_results: List[ValidationResult]
+        self,
+        validation_results: list[ValidationResult]
     ) -> SecurityControlEffectiveness:
         """Analyze validation system effectiveness."""
         try:
@@ -493,30 +494,30 @@ class SecurityControlAnalyzer:
                     effectiveness_score=0.0,
                     last_updated=datetime.now(timezone.utc)
                 )
-            
+
             # Calculate metrics
             total_validations = len(validation_results)
             blocked_requests = sum(1 for r in validation_results if not r.is_valid)
             high_risk_detections = sum(1 for r in validation_results if r.risk_score > 0.7)
-            
+
             # Calculate detection rate (high-risk detections / total)
             detection_rate = high_risk_detections / total_validations if total_validations > 0 else 0.0
-            
+
             # Calculate false positive rate (estimate based on low-risk blocks)
-            low_risk_blocks = sum(1 for r in validation_results 
+            low_risk_blocks = sum(1 for r in validation_results
                                 if not r.is_valid and r.risk_score < 0.3)
             false_positive_rate = low_risk_blocks / blocked_requests if blocked_requests > 0 else 0.0
-            
+
             # Calculate mean response time
             response_times = [r.validation_time for r in validation_results]
             mean_response_time = np.mean(response_times) if response_times else 0.0
-            
+
             # Calculate effectiveness score
-            effectiveness_score = (detection_rate * 0.4 + 
-                                 (1 - false_positive_rate) * 0.4 + 
+            effectiveness_score = (detection_rate * 0.4 +
+                                 (1 - false_positive_rate) * 0.4 +
                                  (1 / max(mean_response_time, 0.001)) * 0.2)
             effectiveness_score = min(1.0, effectiveness_score)
-            
+
             return SecurityControlEffectiveness(
                 control_name="Input Validation",
                 detection_rate=detection_rate,
@@ -527,7 +528,7 @@ class SecurityControlAnalyzer:
                 effectiveness_score=effectiveness_score,
                 last_updated=datetime.now(timezone.utc)
             )
-            
+
         except Exception as e:
             logger.error(f"Validation effectiveness analysis failed: {e}")
             return SecurityControlEffectiveness(
@@ -540,10 +541,10 @@ class SecurityControlAnalyzer:
                 effectiveness_score=0.0,
                 last_updated=datetime.now(timezone.utc)
             )
-    
+
     async def _analyze_incident_response_effectiveness(
-        self, 
-        incidents: List[SecurityIncident]
+        self,
+        incidents: list[SecurityIncident]
     ) -> SecurityControlEffectiveness:
         """Analyze incident response system effectiveness."""
         try:
@@ -558,31 +559,31 @@ class SecurityControlAnalyzer:
                     effectiveness_score=0.0,
                     last_updated=datetime.now(timezone.utc)
                 )
-            
+
             # Calculate metrics
             total_incidents = len(incidents)
             high_confidence_incidents = sum(1 for i in incidents if i.confidence_score > 0.8)
-            
+
             # Detection rate based on high-confidence incidents
             detection_rate = high_confidence_incidents / total_incidents if total_incidents > 0 else 0.0
-            
+
             # False positive rate based on false positive likelihood
             total_fp_likelihood = sum(i.false_positive_likelihood for i in incidents)
             false_positive_rate = total_fp_likelihood / total_incidents if total_incidents > 0 else 0.0
-            
+
             # Response time (placeholder - would need actual response time data)
             mean_response_time = 30.0  # 30 seconds average
-            
+
             # Count critical threats handled
-            critical_threats = sum(1 for i in incidents 
+            critical_threats = sum(1 for i in incidents
                                  if i.severity in [IncidentSeverity.HIGH, IncidentSeverity.CRITICAL])
-            
+
             # Effectiveness score
-            effectiveness_score = (detection_rate * 0.5 + 
-                                 (1 - false_positive_rate) * 0.3 + 
+            effectiveness_score = (detection_rate * 0.5 +
+                                 (1 - false_positive_rate) * 0.3 +
                                  (critical_threats / max(total_incidents, 1)) * 0.2)
             effectiveness_score = min(1.0, effectiveness_score)
-            
+
             return SecurityControlEffectiveness(
                 control_name="Incident Response",
                 detection_rate=detection_rate,
@@ -593,7 +594,7 @@ class SecurityControlAnalyzer:
                 effectiveness_score=effectiveness_score,
                 last_updated=datetime.now(timezone.utc)
             )
-            
+
         except Exception as e:
             logger.error(f"Incident response effectiveness analysis failed: {e}")
             return SecurityControlEffectiveness(
@@ -606,10 +607,10 @@ class SecurityControlAnalyzer:
                 effectiveness_score=0.0,
                 last_updated=datetime.now(timezone.utc)
             )
-    
+
     async def _analyze_quantum_monitoring_effectiveness(
-        self, 
-        quantum_events: List[QuantumSecurityEvent]
+        self,
+        quantum_events: list[QuantumSecurityEvent]
     ) -> SecurityControlEffectiveness:
         """Analyze quantum monitoring system effectiveness."""
         try:
@@ -624,28 +625,28 @@ class SecurityControlAnalyzer:
                     effectiveness_score=0.0,
                     last_updated=datetime.now(timezone.utc)
                 )
-            
+
             total_events = len(quantum_events)
-            high_threat_events = sum(1 for e in quantum_events 
+            high_threat_events = sum(1 for e in quantum_events
                                    if e.threat_level in [QuantumThreatLevel.HIGH, QuantumThreatLevel.CRITICAL])
-            
+
             # Detection rate based on high-threat quantum events
             detection_rate = high_threat_events / total_events if total_events > 0 else 0.0
-            
+
             # Estimate false positive rate based on low-coherence events
             low_coherence_events = sum(1 for e in quantum_events if e.coherence_level < 0.3)
             false_positive_rate = low_coherence_events / total_events if total_events > 0 else 0.0
             false_positive_rate = min(false_positive_rate, 0.5)  # Cap at 50%
-            
+
             # Response time (quantum operations are typically fast)
             mean_response_time = 0.1  # 100ms average
-            
+
             # Effectiveness score
-            effectiveness_score = (detection_rate * 0.4 + 
-                                 (1 - false_positive_rate) * 0.4 + 
+            effectiveness_score = (detection_rate * 0.4 +
+                                 (1 - false_positive_rate) * 0.4 +
                                  (1 / max(mean_response_time, 0.001)) * 0.2)
             effectiveness_score = min(1.0, effectiveness_score * 0.01)  # Scale down for quantum
-            
+
             return SecurityControlEffectiveness(
                 control_name="Quantum Monitoring",
                 detection_rate=detection_rate,
@@ -656,7 +657,7 @@ class SecurityControlAnalyzer:
                 effectiveness_score=effectiveness_score,
                 last_updated=datetime.now(timezone.utc)
             )
-            
+
         except Exception as e:
             logger.error(f"Quantum monitoring effectiveness analysis failed: {e}")
             return SecurityControlEffectiveness(
@@ -673,17 +674,17 @@ class SecurityControlAnalyzer:
 
 class DashboardGenerator:
     """Generate dashboard HTML and data for security visualization."""
-    
+
     def __init__(self, theme: DashboardTheme = DashboardTheme.DARK):
         self.theme = theme
         self.template_cache = {}
-        
+
     async def generate_dashboard_html(
         self,
-        metrics: Dict[str, SecurityMetric],
+        metrics: dict[str, SecurityMetric],
         threat_landscape: ThreatLandscapeData,
-        control_effectiveness: List[SecurityControlEffectiveness],
-        time_series_data: Dict[str, List[Tuple[int, float]]]
+        control_effectiveness: list[SecurityControlEffectiveness],
+        time_series_data: dict[str, list[tuple[int, float]]]
     ) -> str:
         """Generate comprehensive security dashboard HTML."""
         try:
@@ -736,13 +737,13 @@ class DashboardGenerator:
 </body>
 </html>
             """
-            
+
             return dashboard_html
-            
+
         except Exception as e:
             logger.error(f"Dashboard HTML generation failed: {e}")
             return f"<html><body><h1>Dashboard Generation Error</h1><p>{str(e)}</p></body></html>"
-    
+
     def _get_css_styles(self) -> str:
         """Get CSS styles for dashboard."""
         if self.theme == DashboardTheme.DARK:
@@ -894,12 +895,12 @@ class DashboardGenerator:
                     font-size: 0.9em;
                 }
             """
-    
-    def _generate_metrics_cards(self, metrics: Dict[str, SecurityMetric]) -> str:
+
+    def _generate_metrics_cards(self, metrics: dict[str, SecurityMetric]) -> str:
         """Generate HTML for metrics cards."""
         if not metrics:
             return "<p>No metrics available</p>"
-        
+
         cards_html = ""
         for metric_key, metric in metrics.items():
             status_class = metric.status
@@ -911,27 +912,27 @@ class DashboardGenerator:
                 <div class="metric-timestamp">{metric.timestamp.strftime('%H:%M:%S')}</div>
             </div>
             """
-        
+
         return cards_html
-    
+
     def _generate_threat_landscape_section(self, landscape: ThreatLandscapeData) -> str:
         """Generate threat landscape visualization section."""
         # Threat categories
         categories_html = ""
         for category, count in landscape.threat_categories.items():
             categories_html += f'<span class="threat-category">{category}: {count}</span>'
-        
+
         # Severity distribution
         severity_html = ""
         for severity, count in landscape.severity_distribution.items():
             severity_html += f'<span class="threat-category">{severity}: {count}</span>'
-        
+
         # Geographic distribution (top 5)
         geo_items = sorted(landscape.geographic_distribution.items(), key=lambda x: x[1], reverse=True)[:5]
         geo_html = ""
         for country, count in geo_items:
             geo_html += f'<span class="threat-category">{country}: {count}</span>'
-        
+
         return f"""
         <div class="threat-categories">
             <h4>Threat Categories</h4>
@@ -952,12 +953,12 @@ class DashboardGenerator:
             <canvas id="threatChart"></canvas>
         </div>
         """
-    
-    def _generate_control_effectiveness_section(self, controls: List[SecurityControlEffectiveness]) -> str:
+
+    def _generate_control_effectiveness_section(self, controls: list[SecurityControlEffectiveness]) -> str:
         """Generate security control effectiveness section."""
         if not controls:
             return "<p>No control effectiveness data available</p>"
-        
+
         controls_html = ""
         for control in controls:
             effectiveness_percent = control.effectiveness_score * 100
@@ -975,14 +976,14 @@ class DashboardGenerator:
                 </div>
             </div>
             """
-        
+
         return controls_html
-    
-    def _generate_time_series_section(self, time_series: Dict[str, List[Tuple[int, float]]]) -> str:
+
+    def _generate_time_series_section(self, time_series: dict[str, list[tuple[int, float]]]) -> str:
         """Generate time series charts section."""
         if not time_series:
             return "<p>No time series data available</p>"
-        
+
         return """
         <div class="chart-container">
             <canvas id="timeSeriesChart"></canvas>
@@ -993,12 +994,12 @@ class DashboardGenerator:
             <button onclick="updateTimeRange(1440)">24 Hours</button>
         </div>
         """
-    
+
     def _generate_javascript_code(
-        self, 
-        landscape: ThreatLandscapeData, 
-        controls: List[SecurityControlEffectiveness],
-        time_series: Dict[str, List[Tuple[int, float]]]
+        self,
+        landscape: ThreatLandscapeData,
+        controls: list[SecurityControlEffectiveness],
+        time_series: dict[str, list[tuple[int, float]]]
     ) -> str:
         """Generate JavaScript code for interactive charts."""
         return f"""
@@ -1098,8 +1099,8 @@ class SecurityMetricsDashboard:
     - Interactive dashboards
     - Automated alerting
     """
-    
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
         self.metrics_collector = RealTimeMetricsCollector()
         self.landscape_analyzer = ThreatLandscapeAnalyzer()
@@ -1107,12 +1108,12 @@ class SecurityMetricsDashboard:
         self.dashboard_generator = DashboardGenerator(
             theme=DashboardTheme(self.config.get("theme", "dark"))
         )
-        
+
         # Data storage
         self.validation_results = deque(maxlen=10000)
         self.security_incidents = deque(maxlen=10000)
         self.quantum_events = deque(maxlen=10000)
-        
+
         # Alerting
         self.alert_thresholds = self.config.get("alert_thresholds", {
             "critical_incidents_per_hour": 10,
@@ -1120,20 +1121,20 @@ class SecurityMetricsDashboard:
             "low_detection_rate": 0.7,
             "high_response_time": 5.0
         })
-        
+
     async def start_dashboard(self) -> None:
         """Start the security dashboard system."""
         logger.info("Starting security metrics dashboard")
-        
+
         # Start background tasks
         asyncio.create_task(self._metrics_collection_loop())
         asyncio.create_task(self._alerting_loop())
-        
+
     async def record_validation_result(self, result: ValidationResult) -> None:
         """Record a validation result for dashboard analysis."""
         try:
             self.validation_results.append(result)
-            
+
             # Collect metrics
             await self.metrics_collector.collect_security_metric(
                 "validation_requests_total",
@@ -1141,28 +1142,28 @@ class SecurityMetricsDashboard:
                 MetricType.COUNTER,
                 labels={"valid": str(result.is_valid)}
             )
-            
+
             await self.metrics_collector.collect_security_metric(
                 "validation_risk_score",
                 result.risk_score,
                 MetricType.HISTOGRAM
             )
-            
+
             await self.metrics_collector.collect_security_metric(
                 "validation_response_time",
                 result.validation_time,
                 MetricType.HISTOGRAM,
                 threshold=1.0  # 1 second threshold
             )
-            
+
         except Exception as e:
             logger.error(f"Failed to record validation result: {e}")
-    
+
     async def record_security_incident(self, incident: SecurityIncident) -> None:
         """Record a security incident for dashboard analysis."""
         try:
             self.security_incidents.append(incident)
-            
+
             # Collect metrics
             await self.metrics_collector.collect_security_metric(
                 "security_incidents_total",
@@ -1173,27 +1174,27 @@ class SecurityMetricsDashboard:
                     "severity": incident.severity.value
                 }
             )
-            
+
             await self.metrics_collector.collect_security_metric(
                 "incident_confidence_score",
                 incident.confidence_score,
                 MetricType.HISTOGRAM
             )
-            
+
             await self.metrics_collector.collect_security_metric(
                 "false_positive_likelihood",
                 incident.false_positive_likelihood,
                 MetricType.HISTOGRAM
             )
-            
+
         except Exception as e:
             logger.error(f"Failed to record security incident: {e}")
-    
+
     async def record_quantum_event(self, event: QuantumSecurityEvent) -> None:
         """Record a quantum security event for dashboard analysis."""
         try:
             self.quantum_events.append(event)
-            
+
             # Collect metrics
             await self.metrics_collector.collect_security_metric(
                 "quantum_events_total",
@@ -1201,44 +1202,44 @@ class SecurityMetricsDashboard:
                 MetricType.COUNTER,
                 labels={"threat_level": event.threat_level.value}
             )
-            
+
             await self.metrics_collector.collect_security_metric(
                 "quantum_coherence_level",
                 event.coherence_level,
                 MetricType.GAUGE,
                 threshold=0.1  # Coherence threshold
             )
-            
+
         except Exception as e:
             logger.error(f"Failed to record quantum event: {e}")
-    
+
     async def generate_dashboard(self) -> str:
         """Generate comprehensive security dashboard HTML."""
         try:
             # Get current metrics
             current_metrics = await self.metrics_collector.get_real_time_metrics()
-            
+
             # Analyze threat landscape
             recent_incidents = list(self.security_incidents)[-1000:]  # Last 1000 incidents
             recent_quantum_events = list(self.quantum_events)[-1000:]  # Last 1000 events
-            
+
             threat_landscape = await self.landscape_analyzer.analyze_threat_landscape(
                 recent_incidents, recent_quantum_events
             )
-            
+
             # Analyze control effectiveness
             recent_validations = list(self.validation_results)[-1000:]  # Last 1000 validations
             control_effectiveness = await self.control_analyzer.analyze_control_effectiveness(
                 recent_validations, recent_incidents, recent_quantum_events
             )
-            
+
             # Get time series data
             time_series_data = {}
             for metric_name in ["validation_requests_total", "security_incidents_total", "quantum_coherence_level"]:
                 time_series_data[metric_name] = await self.metrics_collector.get_time_series_data(
                     metric_name, duration_minutes=60
                 )
-            
+
             # Generate dashboard HTML
             dashboard_html = await self.dashboard_generator.generate_dashboard_html(
                 current_metrics,
@@ -1246,19 +1247,19 @@ class SecurityMetricsDashboard:
                 control_effectiveness,
                 time_series_data
             )
-            
+
             return dashboard_html
-            
+
         except Exception as e:
             logger.error(f"Dashboard generation failed: {e}")
             return f"<html><body><h1>Dashboard Error</h1><p>{str(e)}</p></body></html>"
-    
-    async def get_dashboard_data_json(self) -> Dict[str, Any]:
+
+    async def get_dashboard_data_json(self) -> dict[str, Any]:
         """Get dashboard data in JSON format for API access."""
         try:
             # Get current metrics
             current_metrics = await self.metrics_collector.get_real_time_metrics()
-            
+
             # Convert metrics to JSON-serializable format
             metrics_json = {}
             for key, metric in current_metrics.items():
@@ -1270,21 +1271,21 @@ class SecurityMetricsDashboard:
                     "status": metric.status,
                     "threshold": metric.threshold
                 }
-            
+
             # Analyze threat landscape
             recent_incidents = list(self.security_incidents)[-1000:]
             recent_quantum_events = list(self.quantum_events)[-1000:]
-            
+
             threat_landscape = await self.landscape_analyzer.analyze_threat_landscape(
                 recent_incidents, recent_quantum_events
             )
-            
+
             # Analyze control effectiveness
             recent_validations = list(self.validation_results)[-1000:]
             control_effectiveness = await self.control_analyzer.analyze_control_effectiveness(
                 recent_validations, recent_incidents, recent_quantum_events
             )
-            
+
             return {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "metrics": metrics_json,
@@ -1311,42 +1312,42 @@ class SecurityMetricsDashboard:
                     for control in control_effectiveness
                 ]
             }
-            
+
         except Exception as e:
             logger.error(f"Dashboard JSON generation failed: {e}")
             return {"error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}
-    
+
     async def _metrics_collection_loop(self) -> None:
         """Background loop for continuous metrics collection."""
         while True:
             try:
                 await asyncio.sleep(30)  # Collect metrics every 30 seconds
-                
+
                 # Calculate derived metrics
                 await self._calculate_derived_metrics()
-                
+
             except Exception as e:
                 logger.error(f"Metrics collection loop error: {e}")
                 await asyncio.sleep(60)  # Back off on error
-    
+
     async def _calculate_derived_metrics(self) -> None:
         """Calculate derived security metrics."""
         try:
             # Calculate incident rates
-            recent_incidents = [i for i in self.security_incidents 
+            recent_incidents = [i for i in self.security_incidents
                               if (datetime.now(timezone.utc) - i.timestamp).seconds < 3600]  # Last hour
-            
+
             await self.metrics_collector.collect_security_metric(
                 "incidents_per_hour",
                 len(recent_incidents),
                 MetricType.GAUGE,
                 threshold=self.alert_thresholds.get("critical_incidents_per_hour", 10)
             )
-            
+
             # Calculate average validation response time
-            recent_validations = [v for v in self.validation_results 
+            recent_validations = [v for v in self.validation_results
                                 if len(self.validation_results) > 0][-100:]  # Last 100
-            
+
             if recent_validations:
                 avg_response_time = np.mean([v.validation_time for v in recent_validations])
                 await self.metrics_collector.collect_security_metric(
@@ -1355,36 +1356,36 @@ class SecurityMetricsDashboard:
                     MetricType.GAUGE,
                     threshold=self.alert_thresholds.get("high_response_time", 5.0)
                 )
-            
+
         except Exception as e:
             logger.error(f"Derived metrics calculation failed: {e}")
-    
+
     async def _alerting_loop(self) -> None:
         """Background loop for security alerting."""
         while True:
             try:
                 await asyncio.sleep(60)  # Check alerts every minute
-                
+
                 # Check for alert conditions
                 await self._check_alert_conditions()
-                
+
             except Exception as e:
                 logger.error(f"Alerting loop error: {e}")
                 await asyncio.sleep(120)  # Back off on error
-    
+
     async def _check_alert_conditions(self) -> None:
         """Check for security alert conditions."""
         try:
             current_metrics = await self.metrics_collector.get_real_time_metrics()
-            
+
             # Check for critical conditions
             for metric_key, metric in current_metrics.items():
                 if metric.status == "critical":
                     logger.warning(f"SECURITY ALERT: Critical condition detected - "
                                  f"{metric.name} = {metric.value} (threshold: {metric.threshold})")
-                    
+
                     # In production, would trigger actual alerting system
-                    
+
         except Exception as e:
             logger.error(f"Alert condition checking failed: {e}")
 

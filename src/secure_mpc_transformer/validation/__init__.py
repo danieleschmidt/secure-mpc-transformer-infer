@@ -2,15 +2,15 @@
 
 from .autonomous_validator import (
     AutonomousValidator,
-    ValidationResult,
+    ThreatCategory,
     ValidationPolicy,
+    ValidationResult,
     ValidationSeverity,
-    ThreatCategory
 )
 
 __all__ = [
     "AutonomousValidator",
-    "ValidationResult", 
+    "ValidationResult",
     "ValidationPolicy",
     "ValidationSeverity",
     "ThreatCategory"

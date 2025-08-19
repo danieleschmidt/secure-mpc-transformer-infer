@@ -7,10 +7,11 @@ used across different compliance frameworks (GDPR, CCPA, PDPA).
 
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any
+
 
 class DataSubjectRightType(Enum):
     """Common data subject rights across compliance frameworks."""
@@ -56,9 +57,9 @@ class DataSubjectRequest:
     request_type: str
     status: str = "pending"
     created_at: datetime = None
-    completed_at: Optional[datetime] = None
-    details: Dict[str, Any] = None
-    
+    completed_at: datetime | None = None
+    details: dict[str, Any] = None
+
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.utcnow()
@@ -73,11 +74,11 @@ class DataClassification:
     classification_id: str
     data_type: str
     sensitivity_level: str  # "public", "internal", "confidential", "restricted"
-    regulatory_scope: List[str]  # ["gdpr", "ccpa", "pdpa"]
-    retention_period: Optional[timedelta] = None
+    regulatory_scope: list[str]  # ["gdpr", "ccpa", "pdpa"]
+    retention_period: timedelta | None = None
     encryption_required: bool = False
-    access_controls: List[str] = None
-    
+    access_controls: list[str] = None
+
     def __post_init__(self):
         if self.access_controls is None:
             self.access_controls = []
@@ -91,11 +92,11 @@ class ConsentRecord:
     data_subject_id: str
     granted: bool
     granted_at: datetime
-    expires_at: Optional[datetime] = None
-    withdrawn_at: Optional[datetime] = None
+    expires_at: datetime | None = None
+    withdrawn_at: datetime | None = None
     consent_method: str = "explicit"
     consent_version: str = "1.0"
-    
+
     def __post_init__(self):
         if not self.consent_id:
             self.consent_id = str(uuid.uuid4())
@@ -106,11 +107,11 @@ class AuditLog:
     log_id: str
     timestamp: datetime
     event_type: str
-    data_subject_id: Optional[str] = None
-    user_id: Optional[str] = None
-    details: Dict[str, Any] = None
-    compliance_framework: Optional[str] = None
-    
+    data_subject_id: str | None = None
+    user_id: str | None = None
+    details: dict[str, Any] = None
+    compliance_framework: str | None = None
+
     def __post_init__(self):
         if self.details is None:
             self.details = {}
@@ -125,9 +126,9 @@ class PrivacyNotice:
     effective_date: datetime
     jurisdiction: str
     language: str
-    content: Dict[str, Any]
+    content: dict[str, Any]
     last_updated: datetime
-    
+
     def __post_init__(self):
         if not self.notice_id:
             self.notice_id = str(uuid.uuid4())
@@ -140,9 +141,9 @@ class DataRetentionPolicy:
     retention_period: timedelta
     retention_basis: str  # Legal basis for retention
     disposal_method: str  # "deletion", "anonymization", "pseudonymization"
-    exceptions: List[str] = None
+    exceptions: list[str] = None
     created_at: datetime = None
-    
+
     def __post_init__(self):
         if self.exceptions is None:
             self.exceptions = []
@@ -153,8 +154,8 @@ class DataRetentionPolicy:
 
 class ComplianceFramework(ABC):
     """Abstract base class for compliance frameworks."""
-    
-    def __init__(self, framework_name: str, config: Dict[str, Any]):
+
+    def __init__(self, framework_name: str, config: dict[str, Any]):
         """
         Initialize compliance framework.
         
@@ -164,13 +165,13 @@ class ComplianceFramework(ABC):
         """
         self.framework_name = framework_name
         self.config = config
-        self.audit_logs: List[AuditLog] = []
-        self.data_classifications: Dict[str, DataClassification] = {}
-        self.retention_policies: Dict[str, DataRetentionPolicy] = {}
-        self.privacy_notices: Dict[str, PrivacyNotice] = {}
-    
+        self.audit_logs: list[AuditLog] = []
+        self.data_classifications: dict[str, DataClassification] = {}
+        self.retention_policies: dict[str, DataRetentionPolicy] = {}
+        self.privacy_notices: dict[str, PrivacyNotice] = {}
+
     @abstractmethod
-    def process_data_subject_request(self, request: DataSubjectRequest) -> Dict[str, Any]:
+    def process_data_subject_request(self, request: DataSubjectRequest) -> dict[str, Any]:
         """
         Process a data subject request.
         
@@ -181,11 +182,11 @@ class ComplianceFramework(ABC):
             Processing result
         """
         pass
-    
+
     @abstractmethod
-    def validate_processing(self, 
-                           data_category: str, 
-                           purpose: str, 
+    def validate_processing(self,
+                           data_category: str,
+                           purpose: str,
                            legal_basis: str,
                            **kwargs) -> bool:
         """
@@ -201,9 +202,9 @@ class ComplianceFramework(ABC):
             True if processing is compliant
         """
         pass
-    
+
     @abstractmethod
-    def generate_compliance_report(self) -> Dict[str, Any]:
+    def generate_compliance_report(self) -> dict[str, Any]:
         """
         Generate compliance report.
         
@@ -211,30 +212,30 @@ class ComplianceFramework(ABC):
             Compliance report dictionary
         """
         pass
-    
+
     def add_data_classification(self, classification: DataClassification) -> None:
         """Add a data classification."""
         self.data_classifications[classification.classification_id] = classification
-        self.log_audit_event("data_classification_added", 
+        self.log_audit_event("data_classification_added",
                            details={"classification_id": classification.classification_id})
-    
+
     def add_retention_policy(self, policy: DataRetentionPolicy) -> None:
         """Add a data retention policy."""
         self.retention_policies[policy.policy_id] = policy
         self.log_audit_event("retention_policy_added",
                            details={"policy_id": policy.policy_id})
-    
+
     def add_privacy_notice(self, notice: PrivacyNotice) -> None:
         """Add a privacy notice."""
         self.privacy_notices[notice.notice_id] = notice
         self.log_audit_event("privacy_notice_added",
                            details={"notice_id": notice.notice_id})
-    
-    def log_audit_event(self, 
+
+    def log_audit_event(self,
                        event_type: str,
-                       data_subject_id: Optional[str] = None,
-                       user_id: Optional[str] = None,
-                       details: Optional[Dict[str, Any]] = None) -> str:
+                       data_subject_id: str | None = None,
+                       user_id: str | None = None,
+                       details: dict[str, Any] | None = None) -> str:
         """
         Log an audit event.
         
@@ -256,15 +257,15 @@ class ComplianceFramework(ABC):
             details=details or {},
             compliance_framework=self.framework_name
         )
-        
+
         self.audit_logs.append(audit_log)
         return audit_log.log_id
-    
-    def get_audit_logs(self, 
-                      start_date: Optional[datetime] = None,
-                      end_date: Optional[datetime] = None,
-                      event_type: Optional[str] = None,
-                      data_subject_id: Optional[str] = None) -> List[AuditLog]:
+
+    def get_audit_logs(self,
+                      start_date: datetime | None = None,
+                      end_date: datetime | None = None,
+                      event_type: str | None = None,
+                      data_subject_id: str | None = None) -> list[AuditLog]:
         """
         Retrieve audit logs with filtering.
         
@@ -278,22 +279,22 @@ class ComplianceFramework(ABC):
             List of matching audit logs
         """
         filtered_logs = self.audit_logs
-        
+
         if start_date:
             filtered_logs = [log for log in filtered_logs if log.timestamp >= start_date]
-        
+
         if end_date:
             filtered_logs = [log for log in filtered_logs if log.timestamp <= end_date]
-        
+
         if event_type:
             filtered_logs = [log for log in filtered_logs if log.event_type == event_type]
-        
+
         if data_subject_id:
             filtered_logs = [log for log in filtered_logs if log.data_subject_id == data_subject_id]
-        
+
         return filtered_logs
-    
-    def get_retention_policy(self, data_category: str) -> Optional[DataRetentionPolicy]:
+
+    def get_retention_policy(self, data_category: str) -> DataRetentionPolicy | None:
         """
         Get retention policy for a data category.
         
@@ -307,7 +308,7 @@ class ComplianceFramework(ABC):
             if policy.data_category == data_category:
                 return policy
         return None
-    
+
     def is_data_expired(self, data_created_at: datetime, data_category: str) -> bool:
         """
         Check if data has expired based on retention policy.
@@ -322,11 +323,11 @@ class ComplianceFramework(ABC):
         policy = self.get_retention_policy(data_category)
         if not policy:
             return False
-        
+
         expiry_date = data_created_at + policy.retention_period
         return datetime.utcnow() > expiry_date
-    
-    def get_framework_info(self) -> Dict[str, Any]:
+
+    def get_framework_info(self) -> dict[str, Any]:
         """
         Get information about the compliance framework.
         

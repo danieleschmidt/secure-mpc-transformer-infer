@@ -1,12 +1,12 @@
 """Autonomous adaptive learning framework."""
 
 from .autonomous_learning_system import (
+    AdaptationRule,
+    AdaptationTrigger,
     AutonomousLearningSystem,
     LearningConfig,
-    LearningStrategy,
-    AdaptationTrigger,
     LearningExperience,
-    AdaptationRule
+    LearningStrategy,
 )
 
 __all__ = [

@@ -2,13 +2,13 @@
 Regional formatting utilities for currency, dates, and numbers
 """
 
-import locale
-from decimal import Decimal
-from datetime import datetime, timezone
-from typing import Dict, Optional, Union, Any
-from dataclasses import dataclass
-import pytz
 import logging
+from dataclasses import dataclass
+from datetime import datetime
+from decimal import Decimal
+from typing import Any
+
+import pytz
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class LocaleSettings:
     timezone: str
 
 # Regional locale settings
-LOCALE_SETTINGS: Dict[str, LocaleSettings] = {
+LOCALE_SETTINGS: dict[str, LocaleSettings] = {
     "en-US": LocaleSettings(
         language="en",
         region="US",
@@ -141,7 +141,7 @@ LOCALE_SETTINGS: Dict[str, LocaleSettings] = {
 
 class CurrencyFormatter:
     """Format currency values according to regional conventions."""
-    
+
     def __init__(self, locale_code: str = "en-US"):
         """
         Initialize currency formatter for a specific locale.
@@ -151,9 +151,9 @@ class CurrencyFormatter:
         """
         self.locale_code = locale_code
         self.settings = LOCALE_SETTINGS.get(locale_code, LOCALE_SETTINGS["en-US"])
-    
-    def format(self, 
-               amount: Union[float, Decimal, int], 
+
+    def format(self,
+               amount: float | Decimal | int,
                precision: int = 2,
                show_symbol: bool = True) -> str:
         """
@@ -170,28 +170,28 @@ class CurrencyFormatter:
         # Convert to Decimal for precise calculations
         if not isinstance(amount, Decimal):
             amount = Decimal(str(amount))
-        
+
         # Round to specified precision
         rounded_amount = round(amount, precision)
-        
+
         # Format the number with separators
         formatted_number = self._format_number(rounded_amount, precision)
-        
+
         if not show_symbol:
             return formatted_number
-        
+
         # Add currency symbol based on position
         if self.settings.currency_position == "before":
             return f"{self.settings.currency_symbol}{formatted_number}"
         else:
             return f"{formatted_number} {self.settings.currency_symbol}"
-    
+
     def _format_number(self, amount: Decimal, precision: int) -> str:
         """Format number with locale-specific separators."""
         # Split into integer and decimal parts
         amount_str = f"{amount:.{precision}f}"
         integer_part, decimal_part = amount_str.split('.')
-        
+
         # Add thousands separators
         if len(integer_part) > 3 and self.settings.thousands_separator:
             # Insert thousands separator every 3 digits from right
@@ -199,7 +199,7 @@ class CurrencyFormatter:
             for i in range(3, len(chars), 4):
                 chars.insert(i, self.settings.thousands_separator)
             integer_part = ''.join(reversed(chars))
-        
+
         # Combine with decimal separator
         if precision > 0:
             return f"{integer_part}{self.settings.decimal_separator}{decimal_part}"
@@ -208,7 +208,7 @@ class CurrencyFormatter:
 
 class DateTimeFormatter:
     """Format dates and times according to regional conventions."""
-    
+
     def __init__(self, locale_code: str = "en-US"):
         """
         Initialize datetime formatter for a specific locale.
@@ -219,7 +219,7 @@ class DateTimeFormatter:
         self.locale_code = locale_code
         self.settings = LOCALE_SETTINGS.get(locale_code, LOCALE_SETTINGS["en-US"])
         self.timezone = pytz.timezone(self.settings.timezone)
-    
+
     def format_date(self, dt: datetime, format_style: str = "medium") -> str:
         """
         Format a date according to locale conventions.
@@ -234,7 +234,7 @@ class DateTimeFormatter:
         # Convert to local timezone if datetime is timezone-aware
         if dt.tzinfo is not None:
             dt = dt.astimezone(self.timezone)
-        
+
         # Get format based on style
         date_formats = {
             "short": self.settings.date_format,
@@ -242,10 +242,10 @@ class DateTimeFormatter:
             "long": self._get_long_date_format(),
             "full": self._get_full_date_format()
         }
-        
+
         format_str = date_formats.get(format_style, self.settings.date_format)
         return dt.strftime(format_str)
-    
+
     def format_time(self, dt: datetime, include_seconds: bool = False) -> str:
         """
         Format a time according to locale conventions.
@@ -260,18 +260,18 @@ class DateTimeFormatter:
         # Convert to local timezone if datetime is timezone-aware
         if dt.tzinfo is not None:
             dt = dt.astimezone(self.timezone)
-        
+
         time_format = self.settings.time_format
         if include_seconds:
             if "%I" in time_format:  # 12-hour format
                 time_format = time_format.replace("%M", "%M:%S")
             else:  # 24-hour format
                 time_format = time_format.replace("%M", "%M:%S")
-        
+
         return dt.strftime(time_format)
-    
-    def format_datetime(self, 
-                       dt: datetime, 
+
+    def format_datetime(self,
+                       dt: datetime,
                        date_style: str = "medium",
                        include_seconds: bool = False) -> str:
         """
@@ -287,7 +287,7 @@ class DateTimeFormatter:
         """
         date_part = self.format_date(dt, date_style)
         time_part = self.format_time(dt, include_seconds)
-        
+
         # Combine date and time based on locale
         if self.locale_code.startswith("en"):
             return f"{date_part} {time_part}"
@@ -297,7 +297,7 @@ class DateTimeFormatter:
             return f"{date_part} {time_part}"
         else:
             return f"{date_part} {time_part}"
-    
+
     def format_relative_time(self, dt: datetime) -> str:
         """
         Format a datetime as relative time (e.g., "2 hours ago").
@@ -313,10 +313,10 @@ class DateTimeFormatter:
             dt = self.timezone.localize(dt)
         else:
             dt = dt.astimezone(self.timezone)
-        
+
         diff = now - dt
         seconds = int(diff.total_seconds())
-        
+
         if seconds < 60:
             return "now" if seconds < 10 else f"{seconds} seconds ago"
         elif seconds < 3600:
@@ -337,38 +337,38 @@ class DateTimeFormatter:
         else:
             years = seconds // 31556952
             return f"{years} year{'s' if years != 1 else ''} ago"
-    
+
     def _get_medium_date_format(self) -> str:
         """Get medium date format for locale."""
         formats = {
             "en": "%b %d, %Y",
-            "es": "%d %b %Y", 
+            "es": "%d %b %Y",
             "fr": "%d %b %Y",
             "de": "%d. %b %Y",
             "ja": "%Y年%m月%d日",
             "zh": "%Y年%m月%d日"
         }
         return formats.get(self.settings.language, formats["en"])
-    
+
     def _get_long_date_format(self) -> str:
         """Get long date format for locale."""
         formats = {
             "en": "%B %d, %Y",
             "es": "%d de %B de %Y",
-            "fr": "%d %B %Y", 
+            "fr": "%d %B %Y",
             "de": "%d. %B %Y",
             "ja": "%Y年%m月%d日",
             "zh": "%Y年%m月%d日"
         }
         return formats.get(self.settings.language, formats["en"])
-    
+
     def _get_full_date_format(self) -> str:
         """Get full date format for locale."""
         formats = {
             "en": "%A, %B %d, %Y",
             "es": "%A, %d de %B de %Y",
             "fr": "%A %d %B %Y",
-            "de": "%A, %d. %B %Y", 
+            "de": "%A, %d. %B %Y",
             "ja": "%Y年%m月%d日 %A",
             "zh": "%Y年%m月%d日 %A"
         }
@@ -376,7 +376,7 @@ class DateTimeFormatter:
 
 class NumberFormatter:
     """Format numbers according to regional conventions."""
-    
+
     def __init__(self, locale_code: str = "en-US"):
         """
         Initialize number formatter for a specific locale.
@@ -386,10 +386,10 @@ class NumberFormatter:
         """
         self.locale_code = locale_code
         self.settings = LOCALE_SETTINGS.get(locale_code, LOCALE_SETTINGS["en-US"])
-    
-    def format(self, 
-               number: Union[int, float, Decimal],
-               precision: Optional[int] = None) -> str:
+
+    def format(self,
+               number: int | float | Decimal,
+               precision: int | None = None) -> str:
         """
         Format a number with locale-specific separators.
         
@@ -405,26 +405,26 @@ class NumberFormatter:
         elif precision is None:
             # Auto-detect decimal places
             precision = len(str(number).split('.')[-1]) if '.' in str(number) else 0
-        
+
         # Format with specified precision
         number_str = f"{float(number):.{precision}f}"
         integer_part, decimal_part = number_str.split('.')
-        
+
         # Add thousands separators
         if len(integer_part) > 3 and self.settings.thousands_separator:
             chars = list(reversed(integer_part))
             for i in range(3, len(chars), 4):
                 chars.insert(i, self.settings.thousands_separator)
             integer_part = ''.join(reversed(chars))
-        
+
         # Combine with decimal separator
         if precision > 0:
             return f"{integer_part}{self.settings.decimal_separator}{decimal_part}"
         else:
             return integer_part
-    
-    def format_percentage(self, 
-                         value: Union[int, float, Decimal],
+
+    def format_percentage(self,
+                         value: int | float | Decimal,
                          precision: int = 1) -> str:
         """
         Format a value as percentage.
@@ -441,7 +441,7 @@ class NumberFormatter:
         return f"{formatted}%"
 
 # Global formatter instances
-_formatters: Dict[str, Dict[str, Any]] = {}
+_formatters: dict[str, dict[str, Any]] = {}
 
 def get_formatter(formatter_type: str, locale_code: str = "en-US") -> Any:
     """
@@ -456,7 +456,7 @@ def get_formatter(formatter_type: str, locale_code: str = "en-US") -> Any:
     """
     if locale_code not in _formatters:
         _formatters[locale_code] = {}
-    
+
     if formatter_type not in _formatters[locale_code]:
         if formatter_type == "currency":
             _formatters[locale_code][formatter_type] = CurrencyFormatter(locale_code)
@@ -466,5 +466,5 @@ def get_formatter(formatter_type: str, locale_code: str = "en-US") -> Any:
             _formatters[locale_code][formatter_type] = NumberFormatter(locale_code)
         else:
             raise ValueError(f"Unknown formatter type: {formatter_type}")
-    
+
     return _formatters[locale_code][formatter_type]

@@ -2,15 +2,15 @@
 
 from .autonomous_executor import (
     AutonomousExecutor,
-    ExecutionTask,
+    ExecutionMetrics,
     ExecutionPhase,
+    ExecutionTask,
     TaskPriority,
-    ExecutionMetrics
 )
 
 __all__ = [
     "AutonomousExecutor",
-    "ExecutionTask", 
+    "ExecutionTask",
     "ExecutionPhase",
     "TaskPriority",
     "ExecutionMetrics"

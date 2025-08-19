@@ -1,15 +1,15 @@
 {
-  "timestamp": "2025-08-16T04:11:44.987695",
-  "overall_score": 0.8196019923382023,
+  "timestamp": "2025-08-19T23:10:12.282696",
+  "overall_score": 0.8201246268307077,
   "overall_status": "FAILED",
   "summary": {
-    "total_execution_time": 1.965404079000109,
+    "total_execution_time": 2.2458511579999936,
     "gates_executed": 4,
     "gates_passed": 1,
     "gates_warning": 2,
     "gates_failed": 1,
     "quality_level": "ENTERPRISE",
-    "average_gate_score": 0.8196019923382023,
+    "average_gate_score": 0.8201246268307077,
     "production_ready": false,
     "critical_issues": 1,
     "minor_issues": 2
@@ -18,59 +18,59 @@
     {
       "gate_name": "Comprehensive Testing",
       "status": "WARNING",
-      "score": 0.9151775887074278,
-      "details": "Testing adequate: 27 failures, coverage below target",
-      "execution_time": 0.048796454000239464,
+      "score": 0.9263791458032733,
+      "details": "Testing adequate: 39 failures, coverage below target",
+      "execution_time": 0.0346025119999922,
       "metrics": {
-        "total_tests": 369,
-        "passed_tests": 342,
-        "failed_tests": 27,
-        "test_pass_rate": 0.9294686006529752,
-        "code_coverage": 0.7657535902475983,
+        "total_tests": 423,
+        "passed_tests": 384,
+        "failed_tests": 39,
+        "test_pass_rate": 0.9091908647286472,
+        "code_coverage": 0.8020323128462146,
         "coverage_target": 0.85,
-        "lines_covered": 6011,
-        "total_lines": 7850,
-        "test_files_found": 28
+        "lines_covered": 6456,
+        "total_lines": 8050,
+        "test_files_found": 33
       }
     },
     {
       "gate_name": "Security Validation",
       "status": "FAILED",
       "score": 0.6,
-      "details": "Security issues detected: 44 vulnerabilities",
-      "execution_time": 0.4157228969997959,
+      "details": "Security issues detected: 47 vulnerabilities",
+      "execution_time": 0.4410348140000053,
       "metrics": {
         "vulnerability_scan_score": 0.0,
         "dependency_audit_score": 1.0,
         "secrets_scan_score": 0.3999999999999999,
         "code_security_score": 1.0,
-        "total_vulnerabilities": 44,
+        "total_vulnerabilities": 47,
         "critical_vulnerabilities": 0,
         "high_vulnerabilities": 15,
-        "medium_vulnerabilities": 16,
+        "medium_vulnerabilities": 17,
         "secrets_found": 3,
-        "dependencies_scanned": 204
+        "dependencies_scanned": 205
       }
     },
     {
       "gate_name": "Performance Benchmark",
       "status": "WARNING",
-      "score": 0.7632303806453816,
+      "score": 0.7541193615195576,
       "details": "Performance acceptable: 4/4 thresholds met",
-      "execution_time": 0.009993742999995447,
+      "execution_time": 0.010931704999990188,
       "metrics": {
-        "avg_response_time_ms": 61.93635185726449,
-        "p95_response_time_ms": 150.2896456840803,
-        "throughput_ops_sec": 167.48507811811777,
-        "memory_usage_mb": 229.8992807732303,
-        "cpu_usage_percent": 40.51707917797902,
-        "scalability_factor": 0.7307846671168331,
+        "avg_response_time_ms": 59.67960242690443,
+        "p95_response_time_ms": 137.95125772110566,
+        "throughput_ops_sec": 141.5917595046324,
+        "memory_usage_mb": 339.43250979780555,
+        "cpu_usage_percent": 39.531794481703685,
+        "scalability_factor": 0.7316654286223032,
         "thresholds_met": 4,
         "total_thresholds": 4,
-        "response_time_score": 0.6903182407136775,
+        "response_time_score": 0.7016019878654778,
         "throughput_score": 1.0,
-        "resource_usage_score": 0.631818614751016,
-        "scalability_score": 0.7307846671168331
+        "resource_usage_score": 0.5832100295904492,
+        "scalability_score": 0.7316654286223032
       }
     },
     {
@@ -78,17 +78,17 @@
       "status": "PASSED",
       "score": 1.0,
       "details": "Documentation complete and high quality",
-      "execution_time": 1.4905476829999316,
+      "execution_time": 1.7589511930000015,
       "metrics": {
         "required_files_score": 1.0,
         "code_documentation_score": 1.0,
         "documentation_quality_score": 1.0,
         "missing_required_files": 0,
-        "code_documentation_coverage": 0.8659770631886665,
-        "total_functions": 4447,
-        "documented_functions": 3851,
-        "documentation_word_count": 71619,
-        "documentation_sections": 6817
+        "code_documentation_coverage": 0.8617989417989418,
+        "total_functions": 4725,
+        "documented_functions": 4072,
+        "documentation_word_count": 84886,
+        "documentation_sections": 8269
       }
     }
   ],
