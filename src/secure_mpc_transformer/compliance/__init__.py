@@ -15,51 +15,51 @@ Features:
 - Privacy by design implementations
 """
 
-from .gdpr import GDPRCompliance, GDPRDataProcessor, GDPRConsentManager
-from .ccpa import CCPACompliance, CCPADataProcessor, CCPAPrivacyRights
-from .pdpa import PDPACompliance, PDPADataProcessor, PDPAPrivacyManager
+from .audit import AuditReporter, ComplianceAuditor
 from .base import (
+    AuditLog,
     ComplianceFramework,
-    DataSubjectRequest,
-    DataClassification,
     ConsentRecord,
-    AuditLog
+    DataClassification,
+    DataSubjectRequest,
 )
+from .ccpa import CCPACompliance, CCPADataProcessor, CCPAPrivacyRights
 from .data_processor import (
-    GlobalDataProcessor,
+    AnonymizationEngine,
     DataRetentionManager,
-    AnonymizationEngine
+    GlobalDataProcessor,
 )
-from .audit import ComplianceAuditor, AuditReporter
+from .gdpr import GDPRCompliance, GDPRConsentManager, GDPRDataProcessor
+from .pdpa import PDPACompliance, PDPADataProcessor, PDPAPrivacyManager
 
 __all__ = [
     # GDPR
     "GDPRCompliance",
-    "GDPRDataProcessor", 
+    "GDPRDataProcessor",
     "GDPRConsentManager",
-    
+
     # CCPA
     "CCPACompliance",
     "CCPADataProcessor",
     "CCPAPrivacyRights",
-    
+
     # PDPA
-    "PDPACompliance", 
+    "PDPACompliance",
     "PDPADataProcessor",
     "PDPAPrivacyManager",
-    
+
     # Base classes
     "ComplianceFramework",
     "DataSubjectRequest",
     "DataClassification",
     "ConsentRecord",
     "AuditLog",
-    
+
     # Data processing
     "GlobalDataProcessor",
-    "DataRetentionManager", 
+    "DataRetentionManager",
     "AnonymizationEngine",
-    
+
     # Auditing
     "ComplianceAuditor",
     "AuditReporter"
@@ -74,7 +74,7 @@ SUPPORTED_FRAMEWORKS = {
         "class": "GDPRCompliance"
     },
     "ccpa": {
-        "name": "California Consumer Privacy Act", 
+        "name": "California Consumer Privacy Act",
         "jurisdiction": "California, USA",
         "effective_date": "2020-01-01",
         "class": "CCPACompliance"
@@ -82,7 +82,7 @@ SUPPORTED_FRAMEWORKS = {
     "pdpa": {
         "name": "Personal Data Protection Act",
         "jurisdiction": "Singapore, Thailand, Malaysia",
-        "effective_date": "2021-01-01", 
+        "effective_date": "2021-01-01",
         "class": "PDPACompliance"
     }
 }
@@ -103,10 +103,10 @@ def get_compliance_framework(framework_name: str, config: dict = None):
     """
     if framework_name.lower() not in SUPPORTED_FRAMEWORKS:
         raise ValueError(f"Unsupported compliance framework: {framework_name}")
-    
+
     framework_info = SUPPORTED_FRAMEWORKS[framework_name.lower()]
     config = config or {}
-    
+
     if framework_name.lower() == "gdpr":
         return GDPRCompliance(config)
     elif framework_name.lower() == "ccpa":

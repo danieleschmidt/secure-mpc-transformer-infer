@@ -17,22 +17,22 @@ Features:
 - Locale-aware validation
 """
 
-from .translator import Translator, get_translator
 from .formatters import (
     CurrencyFormatter,
-    DateTimeFormatter, 
+    DateTimeFormatter,
     NumberFormatter,
-    get_formatter
+    get_formatter,
 )
 from .locale_manager import LocaleManager, get_locale_manager
+from .translator import Translator, get_translator
 from .validation import LocaleValidator, validate_locale_input
 
 __all__ = [
     "Translator",
-    "get_translator", 
+    "get_translator",
     "CurrencyFormatter",
     "DateTimeFormatter",
-    "NumberFormatter", 
+    "NumberFormatter",
     "get_formatter",
     "LocaleManager",
     "get_locale_manager",
@@ -51,7 +51,7 @@ SUPPORTED_LANGUAGES = {
         "rtl": False
     },
     "es": {
-        "name": "Spanish", 
+        "name": "Spanish",
         "native_name": "Español",
         "regions": ["ES", "MX", "AR", "CO", "CL"],
         "default_region": "ES",
@@ -60,7 +60,7 @@ SUPPORTED_LANGUAGES = {
     },
     "fr": {
         "name": "French",
-        "native_name": "Français", 
+        "native_name": "Français",
         "regions": ["FR", "CA", "BE", "CH"],
         "default_region": "FR",
         "currency": "EUR",
@@ -70,7 +70,7 @@ SUPPORTED_LANGUAGES = {
         "name": "German",
         "native_name": "Deutsch",
         "regions": ["DE", "AT", "CH"],
-        "default_region": "DE", 
+        "default_region": "DE",
         "currency": "EUR",
         "rtl": False
     },
@@ -79,7 +79,7 @@ SUPPORTED_LANGUAGES = {
         "native_name": "日本語",
         "regions": ["JP"],
         "default_region": "JP",
-        "currency": "JPY", 
+        "currency": "JPY",
         "rtl": False
     },
     "zh": {
@@ -94,7 +94,7 @@ SUPPORTED_LANGUAGES = {
 
 # Default configuration
 DEFAULT_LANGUAGE = "en"
-DEFAULT_REGION = "US" 
+DEFAULT_REGION = "US"
 DEFAULT_TIMEZONE = "UTC"
 
 def get_supported_languages():

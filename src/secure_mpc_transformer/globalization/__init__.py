@@ -2,11 +2,11 @@
 
 from .autonomous_global_manager import (
     AutonomousGlobalManager,
-    GlobalConfig,
     ComplianceFramework,
-    SupportedLocale,
     ComplianceRule,
-    LocalizationEntry
+    GlobalConfig,
+    LocalizationEntry,
+    SupportedLocale,
 )
 
 __all__ = [
@@ -14,6 +14,6 @@ __all__ = [
     "GlobalConfig",
     "ComplianceFramework",
     "SupportedLocale",
-    "ComplianceRule", 
+    "ComplianceRule",
     "LocalizationEntry"
 ]

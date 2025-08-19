@@ -2,18 +2,18 @@
 
 from .autonomous_resilience import (
     AutonomousResilienceManager,
+    CircuitBreaker,
     FailureRecord,
     FailureType,
     RecoveryStrategy,
     ResilienceConfig,
-    CircuitBreaker,
-    resilient_execution
+    resilient_execution,
 )
 
 __all__ = [
     "AutonomousResilienceManager",
     "FailureRecord",
-    "FailureType", 
+    "FailureType",
     "RecoveryStrategy",
     "ResilienceConfig",
     "CircuitBreaker",

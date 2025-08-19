@@ -6,16 +6,15 @@ for autonomous SDLC execution with defensive security focus.
 """
 
 import asyncio
-import logging
-import time
 import json
-import os
-from typing import Dict, List, Optional, Any, Union
+import locale
+import logging
+import platform
+import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-import locale
-import platform
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +57,10 @@ class ComplianceRule:
     category: str
     title: str
     description: str
-    requirements: List[str]
+    requirements: list[str]
     severity: str  # critical, high, medium, low
-    applicable_regions: List[str]
-    validation_function: Optional[str] = None
+    applicable_regions: list[str]
+    validation_function: str | None = None
 
 
 @dataclass
@@ -70,25 +69,25 @@ class LocalizationEntry:
     key: str
     locale: SupportedLocale
     value: str
-    context: Optional[str] = None
-    pluralization_rules: Optional[Dict[str, str]] = None
+    context: str | None = None
+    pluralization_rules: dict[str, str] | None = None
 
 
 @dataclass
 class GlobalConfig:
     """Configuration for global deployment"""
     default_locale: SupportedLocale = SupportedLocale.EN_US
-    supported_locales: List[SupportedLocale] = field(default_factory=lambda: [
+    supported_locales: list[SupportedLocale] = field(default_factory=lambda: [
         SupportedLocale.EN_US, SupportedLocale.ES_ES, SupportedLocale.FR_FR,
         SupportedLocale.DE_DE, SupportedLocale.JA_JP, SupportedLocale.ZH_CN
     ])
-    compliance_frameworks: List[ComplianceFramework] = field(default_factory=lambda: [
+    compliance_frameworks: list[ComplianceFramework] = field(default_factory=lambda: [
         ComplianceFramework.GDPR, ComplianceFramework.CCPA, ComplianceFramework.ISO_27001
     ])
     enable_rtl_support: bool = True  # Right-to-left language support
     enable_timezone_conversion: bool = True
     enable_currency_conversion: bool = True
-    data_residency_requirements: Dict[str, List[str]] = field(default_factory=dict)
+    data_residency_requirements: dict[str, list[str]] = field(default_factory=dict)
 
 
 class AutonomousGlobalManager:
@@ -98,31 +97,31 @@ class AutonomousGlobalManager:
     Implements internationalization, compliance frameworks,
     and cross-platform support for autonomous systems.
     """
-    
-    def __init__(self, config: Optional[GlobalConfig] = None,
-                 project_root: Optional[Path] = None):
+
+    def __init__(self, config: GlobalConfig | None = None,
+                 project_root: Path | None = None):
         self.config = config or GlobalConfig()
         self.project_root = project_root or Path.cwd()
-        
+
         # Localization data
-        self.translations: Dict[str, Dict[str, str]] = {}
-        self.localization_cache: Dict[str, LocalizationEntry] = {}
-        
+        self.translations: dict[str, dict[str, str]] = {}
+        self.localization_cache: dict[str, LocalizationEntry] = {}
+
         # Compliance rules
-        self.compliance_rules: Dict[str, ComplianceRule] = {}
-        
+        self.compliance_rules: dict[str, ComplianceRule] = {}
+
         # Platform detection
         self.platform_info = self._detect_platform_info()
-        
+
         # Global deployment tracking
-        self.deployment_regions: Dict[str, Dict[str, Any]] = {}
-        
+        self.deployment_regions: dict[str, dict[str, Any]] = {}
+
         logger.info(f"AutonomousGlobalManager initialized for {len(self.config.supported_locales)} locales")
-        
+
         # Initialize default data
         asyncio.create_task(self._initialize_global_data())
-    
-    def _detect_platform_info(self) -> Dict[str, Any]:
+
+    def _detect_platform_info(self) -> dict[str, Any]:
         """Detect current platform information"""
         return {
             "system": platform.system(),
@@ -135,7 +134,7 @@ class AutonomousGlobalManager:
             "locale": locale.getdefaultlocale(),
             "encoding": locale.getpreferredencoding()
         }
-    
+
     async def _initialize_global_data(self) -> None:
         """Initialize global localization and compliance data"""
         try:
@@ -144,16 +143,16 @@ class AutonomousGlobalManager:
             logger.info("Global data initialization completed")
         except Exception as e:
             logger.error(f"Failed to initialize global data: {e}")
-    
+
     async def _load_translations(self) -> None:
         """Load translation data for supported locales"""
-        
+
         # Default translations for common terms
         default_translations = {
             "en_US": {
                 "welcome": "Welcome",
                 "error": "Error",
-                "success": "Success", 
+                "success": "Success",
                 "loading": "Loading",
                 "cancel": "Cancel",
                 "confirm": "Confirm",
@@ -271,17 +270,17 @@ class AutonomousGlobalManager:
                 "performance_metrics": "性能指标"
             }
         }
-        
+
         self.translations = default_translations
-        
+
         # Try to load from translation files if they exist
         i18n_dir = self.project_root / "src" / "secure_mpc_transformer" / "i18n" / "translations"
-        
+
         if i18n_dir.exists():
             for locale_file in i18n_dir.glob("*.json"):
                 locale_code = locale_file.stem
                 try:
-                    with open(locale_file, 'r', encoding='utf-8') as f:
+                    with open(locale_file, encoding='utf-8') as f:
                         file_translations = json.load(f)
                         if locale_code in self.translations:
                             self.translations[locale_code].update(file_translations)
@@ -290,10 +289,10 @@ class AutonomousGlobalManager:
                     logger.debug(f"Loaded translations for {locale_code}")
                 except Exception as e:
                     logger.warning(f"Failed to load translations from {locale_file}: {e}")
-    
+
     async def _load_compliance_rules(self) -> None:
         """Load compliance rules for different frameworks"""
-        
+
         # GDPR compliance rules
         gdpr_rules = [
             ComplianceRule(
@@ -342,7 +341,7 @@ class AutonomousGlobalManager:
                 validation_function="validate_data_encryption"
             )
         ]
-        
+
         # ISO 27001 compliance rules
         iso27001_rules = [
             ComplianceRule(
@@ -376,7 +375,7 @@ class AutonomousGlobalManager:
                 validation_function="validate_incident_management"
             )
         ]
-        
+
         # CCPA compliance rules
         ccpa_rules = [
             ComplianceRule(
@@ -395,16 +394,16 @@ class AutonomousGlobalManager:
                 validation_function="validate_privacy_rights"
             )
         ]
-        
+
         # Store all rules
         all_rules = gdpr_rules + iso27001_rules + ccpa_rules
         for rule in all_rules:
             self.compliance_rules[rule.id] = rule
-        
+
         logger.info(f"Loaded {len(all_rules)} compliance rules")
-    
-    def translate(self, key: str, locale: Optional[Union[str, SupportedLocale]] = None,
-                  context: Optional[str] = None, **kwargs) -> str:
+
+    def translate(self, key: str, locale: str | SupportedLocale | None = None,
+                  context: str | None = None, **kwargs) -> str:
         """
         Translate a key to the specified locale.
         
@@ -417,7 +416,7 @@ class AutonomousGlobalManager:
         Returns:
             Translated string
         """
-        
+
         # Determine target locale
         if locale is None:
             target_locale = self.config.default_locale.value
@@ -425,27 +424,27 @@ class AutonomousGlobalManager:
             target_locale = locale.value
         else:
             target_locale = str(locale)
-        
+
         # Get translation
         translation = self._get_translation(key, target_locale)
-        
+
         # Apply string interpolation if kwargs provided
         if kwargs:
             try:
                 translation = translation.format(**kwargs)
             except (KeyError, ValueError) as e:
                 logger.warning(f"Translation interpolation failed for key '{key}': {e}")
-        
+
         return translation
-    
+
     def _get_translation(self, key: str, locale: str) -> str:
         """Get translation for key and locale"""
-        
+
         # Check cache first
         cache_key = f"{locale}:{key}"
         if cache_key in self.localization_cache:
             return self.localization_cache[cache_key].value
-        
+
         # Look up translation
         if locale in self.translations and key in self.translations[locale]:
             translation = self.translations[locale][key]
@@ -457,18 +456,18 @@ class AutonomousGlobalManager:
             # No translation found, return key
             translation = key
             logger.warning(f"No translation found for key '{key}' in locale '{locale}'")
-        
+
         # Cache the result
         self.localization_cache[cache_key] = LocalizationEntry(
             key=key,
             locale=SupportedLocale(locale) if locale in [l.value for l in SupportedLocale] else SupportedLocale.EN_US,
             value=translation
         )
-        
+
         return translation
-    
-    async def validate_compliance(self, frameworks: Optional[List[ComplianceFramework]] = None,
-                                region: Optional[str] = None) -> Dict[str, Any]:
+
+    async def validate_compliance(self, frameworks: list[ComplianceFramework] | None = None,
+                                region: str | None = None) -> dict[str, Any]:
         """
         Validate compliance with specified frameworks.
         
@@ -479,12 +478,12 @@ class AutonomousGlobalManager:
         Returns:
             Compliance validation results
         """
-        
+
         if frameworks is None:
             frameworks = self.config.compliance_frameworks
-        
+
         logger.info(f"Validating compliance for frameworks: {[f.value for f in frameworks]}")
-        
+
         validation_results = {
             "overall_status": "compliant",
             "framework_results": {},
@@ -492,32 +491,32 @@ class AutonomousGlobalManager:
             "recommendations": [],
             "validation_time": time.time()
         }
-        
+
         total_rules = 0
         passed_rules = 0
-        
+
         for framework in frameworks:
             framework_rules = [
                 rule for rule in self.compliance_rules.values()
                 if rule.framework == framework
             ]
-            
+
             if region:
                 framework_rules = [
                     rule for rule in framework_rules
                     if region in rule.applicable_regions or "Global" in rule.applicable_regions
                 ]
-            
+
             framework_result = await self._validate_framework_compliance(framework, framework_rules)
             validation_results["framework_results"][framework.value] = framework_result
-            
+
             total_rules += framework_result["total_rules"]
             passed_rules += framework_result["passed_rules"]
-            
+
             # Collect violations
             validation_results["violations"].extend(framework_result["violations"])
             validation_results["recommendations"].extend(framework_result["recommendations"])
-        
+
         # Determine overall status
         if validation_results["violations"]:
             critical_violations = [v for v in validation_results["violations"] if v["severity"] == "critical"]
@@ -525,15 +524,15 @@ class AutonomousGlobalManager:
                 validation_results["overall_status"] = "non_compliant"
             else:
                 validation_results["overall_status"] = "partial_compliance"
-        
+
         validation_results["compliance_score"] = passed_rules / total_rules if total_rules > 0 else 1.0
-        
+
         return validation_results
-    
+
     async def _validate_framework_compliance(self, framework: ComplianceFramework,
-                                           rules: List[ComplianceRule]) -> Dict[str, Any]:
+                                           rules: list[ComplianceRule]) -> dict[str, Any]:
         """Validate compliance for a specific framework"""
-        
+
         result = {
             "framework": framework.value,
             "total_rules": len(rules),
@@ -542,11 +541,11 @@ class AutonomousGlobalManager:
             "violations": [],
             "recommendations": []
         }
-        
+
         for rule in rules:
             try:
                 is_compliant = await self._validate_compliance_rule(rule)
-                
+
                 if is_compliant:
                     result["passed_rules"] += 1
                 else:
@@ -558,24 +557,24 @@ class AutonomousGlobalManager:
                         "description": rule.description,
                         "requirements": rule.requirements
                     })
-                    
+
                     # Add recommendations for failed rules
                     result["recommendations"].extend([
                         f"Address {rule.title}: {req}" for req in rule.requirements
                     ])
-                    
+
             except Exception as e:
                 logger.error(f"Failed to validate rule {rule.id}: {e}")
                 result["failed_rules"] += 1
-        
+
         return result
-    
+
     async def _validate_compliance_rule(self, rule: ComplianceRule) -> bool:
         """Validate a specific compliance rule"""
-        
+
         # This is a simplified validation - in production, each rule would have
         # specific validation logic
-        
+
         if rule.validation_function:
             try:
                 # In a real implementation, this would call the specific validation function
@@ -588,7 +587,7 @@ class AutonomousGlobalManager:
             except Exception as e:
                 logger.error(f"Validation function {rule.validation_function} failed: {e}")
                 return False
-        
+
         # Default validation based on rule category
         if rule.category == "data_protection":
             return await self._validate_data_protection(rule)
@@ -599,10 +598,10 @@ class AutonomousGlobalManager:
         else:
             # Generic validation
             return True  # Assume compliant for unknown categories
-    
+
     async def _validate_data_protection(self, rule: ComplianceRule) -> bool:
         """Validate data protection compliance"""
-        
+
         # Check for data encryption
         has_encryption = False
         for py_file in self.project_root.rglob("*.py"):
@@ -613,12 +612,12 @@ class AutonomousGlobalManager:
                     break
             except Exception:
                 continue
-        
+
         return has_encryption
-    
+
     async def _validate_access_control(self, rule: ComplianceRule) -> bool:
         """Validate access control compliance"""
-        
+
         # Check for authentication/authorization code
         has_auth = False
         for py_file in self.project_root.rglob("*.py"):
@@ -629,26 +628,26 @@ class AutonomousGlobalManager:
                     break
             except Exception:
                 continue
-        
+
         return has_auth
-    
+
     async def _validate_technical_measures(self, rule: ComplianceRule) -> bool:
         """Validate technical security measures"""
-        
+
         # Check for security implementations
         has_security = False
         security_files = ["security", "validation", "resilience"]
-        
+
         for security_term in security_files:
             if any(self.project_root.rglob(f"*{security_term}*.py")):
                 has_security = True
                 break
-        
+
         return has_security
-    
-    def get_supported_locales(self) -> List[Dict[str, str]]:
+
+    def get_supported_locales(self) -> list[dict[str, str]]:
         """Get list of supported locales with metadata"""
-        
+
         locale_metadata = {
             SupportedLocale.EN_US: {"name": "English (US)", "rtl": False, "region": "Americas"},
             SupportedLocale.EN_GB: {"name": "English (UK)", "rtl": False, "region": "Europe"},
@@ -666,7 +665,7 @@ class AutonomousGlobalManager:
             SupportedLocale.AR_SA: {"name": "العربية (السعودية)", "rtl": True, "region": "Middle East"},
             SupportedLocale.HI_IN: {"name": "हिन्दी (भारत)", "rtl": False, "region": "Asia"}
         }
-        
+
         supported = []
         for locale in self.config.supported_locales:
             metadata = locale_metadata.get(locale, {"name": locale.value, "rtl": False, "region": "Unknown"})
@@ -677,12 +676,12 @@ class AutonomousGlobalManager:
                 "region": metadata["region"],
                 "has_translations": locale.value in self.translations
             })
-        
+
         return supported
-    
-    def get_compliance_frameworks(self) -> List[Dict[str, Any]]:
+
+    def get_compliance_frameworks(self) -> list[dict[str, Any]]:
         """Get list of supported compliance frameworks"""
-        
+
         framework_metadata = {
             ComplianceFramework.GDPR: {
                 "name": "General Data Protection Regulation",
@@ -720,7 +719,7 @@ class AutonomousGlobalManager:
                 "description": "Security standard for payment card data"
             }
         }
-        
+
         frameworks = []
         for framework in ComplianceFramework:
             metadata = framework_metadata.get(framework, {
@@ -728,9 +727,9 @@ class AutonomousGlobalManager:
                 "region": "Unknown",
                 "description": "No description available"
             })
-            
+
             rule_count = len([r for r in self.compliance_rules.values() if r.framework == framework])
-            
+
             frameworks.append({
                 "code": framework.value,
                 "name": metadata["name"],
@@ -739,16 +738,16 @@ class AutonomousGlobalManager:
                 "rule_count": rule_count,
                 "enabled": framework in self.config.compliance_frameworks
             })
-        
+
         return frameworks
-    
-    def get_platform_info(self) -> Dict[str, Any]:
+
+    def get_platform_info(self) -> dict[str, Any]:
         """Get current platform information"""
         return self.platform_info.copy()
-    
-    async def generate_deployment_config(self, regions: List[str]) -> Dict[str, Any]:
+
+    async def generate_deployment_config(self, regions: list[str]) -> dict[str, Any]:
         """Generate deployment configuration for multiple regions"""
-        
+
         deployment_config = {
             "global_config": {
                 "default_locale": self.config.default_locale.value,
@@ -762,7 +761,7 @@ class AutonomousGlobalManager:
             "compliance_requirements": {},
             "localization_data": self.translations
         }
-        
+
         # Regional configuration mapping
         region_configs = {
             "eu-west": {
@@ -798,7 +797,7 @@ class AutonomousGlobalManager:
                 "currency": "USD"
             }
         }
-        
+
         # Configure each region
         for region in regions:
             if region in region_configs:
@@ -813,7 +812,7 @@ class AutonomousGlobalManager:
                     "timezone": "UTC",
                     "currency": "USD"
                 }
-        
+
         # Add compliance requirements for each framework
         for framework in self.config.compliance_frameworks:
             framework_rules = [r for r in self.compliance_rules.values() if r.framework == framework]
@@ -827,19 +826,19 @@ class AutonomousGlobalManager:
                 }
                 for rule in framework_rules
             ]
-        
+
         return deployment_config
-    
-    def get_globalization_metrics(self) -> Dict[str, Any]:
+
+    def get_globalization_metrics(self) -> dict[str, Any]:
         """Get globalization implementation metrics"""
-        
+
         translation_coverage = {}
         for locale in [l.value for l in self.config.supported_locales]:
             if locale in self.translations:
                 translation_coverage[locale] = len(self.translations[locale])
             else:
                 translation_coverage[locale] = 0
-        
+
         return {
             "supported_locales": len(self.config.supported_locales),
             "available_translations": len(self.translations),
@@ -860,7 +859,7 @@ class AutonomousGlobalManager:
                 "localization_cache_size": len(self.localization_cache)
             }
         }
-    
+
     def clear_cache(self) -> None:
         """Clear localization cache"""
         self.localization_cache.clear()

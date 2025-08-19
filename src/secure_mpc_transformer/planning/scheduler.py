@@ -5,17 +5,24 @@ High-level scheduler that integrates quantum planning with MPC transformer
 workflows, providing intelligent task orchestration and execution management.
 """
 
-from dataclasses import dataclass
-from enum import Enum
-from typing import List, Dict, Optional, Set, Callable, Any, Union
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor
 import threading
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from typing import Any
 
-from .quantum_planner import QuantumTaskPlanner, Task, TaskType, TaskStatus, QuantumTaskConfig
-from .optimization import QuantumOptimizer, OptimizationObjective, OptimizationResult
+from .optimization import OptimizationObjective, OptimizationResult, QuantumOptimizer
+from .quantum_planner import (
+    QuantumTaskConfig,
+    QuantumTaskPlanner,
+    Task,
+    TaskStatus,
+    TaskType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +55,7 @@ class SchedulerConfig:
     quantum_optimization: bool = True
     performance_monitoring: bool = True
     auto_scaling: bool = False
-    resource_limits: Optional[Dict[str, float]] = None
+    resource_limits: dict[str, float] | None = None
 
 
 @dataclass
@@ -60,8 +67,8 @@ class SchedulerMetrics:
     average_execution_time: float = 0.0
     total_execution_time: float = 0.0
     quantum_optimization_time: float = 0.0
-    resource_utilization: Dict[str, float] = None
-    
+    resource_utilization: dict[str, float] = None
+
     def __post_init__(self):
         if self.resource_utilization is None:
             self.resource_utilization = {}
@@ -74,8 +81,8 @@ class QuantumScheduler:
     Integrates quantum planning algorithms with practical scheduling
     capabilities for optimal resource utilization and performance.
     """
-    
-    def __init__(self, config: Optional[SchedulerConfig] = None):
+
+    def __init__(self, config: SchedulerConfig | None = None):
         self.config = config or SchedulerConfig()
         self.planner = QuantumTaskPlanner(QuantumTaskConfig(
             max_parallel_tasks=self.config.max_concurrent_tasks,
@@ -85,41 +92,41 @@ class QuantumScheduler:
             objective=OptimizationObjective.BALANCE_ALL,
             max_iterations=500
         )
-        
+
         # Scheduler state
         self.status = SchedulerStatus.IDLE
         self.metrics = SchedulerMetrics()
-        self.active_tasks: Dict[str, Task] = {}
-        self.task_futures: Dict[str, asyncio.Future] = {}
-        self.resource_monitors: Dict[str, float] = {}
-        
+        self.active_tasks: dict[str, Task] = {}
+        self.task_futures: dict[str, asyncio.Future] = {}
+        self.resource_monitors: dict[str, float] = {}
+
         # Thread safety
         self._lock = threading.Lock()
         self._executor = ThreadPoolExecutor(max_workers=self.config.max_concurrent_tasks)
-        
+
         # Event callbacks
-        self.task_callbacks: Dict[str, List[Callable]] = {
+        self.task_callbacks: dict[str, list[Callable]] = {
             'on_task_start': [],
             'on_task_complete': [],
             'on_task_fail': [],
             'on_batch_complete': []
         }
-        
+
         logger.info(f"Initialized QuantumScheduler with {self.config.max_concurrent_tasks} max concurrent tasks")
-    
+
     def register_callback(self, event: str, callback: Callable):
         """Register event callback"""
         if event in self.task_callbacks:
             self.task_callbacks[event].append(callback)
-    
-    def create_mpc_task(self, 
+
+    def create_mpc_task(self,
                        task_id: str,
                        task_type: TaskType,
                        priority: TaskPriority = TaskPriority.MEDIUM,
                        estimated_duration: float = 1.0,
-                       required_resources: Optional[Dict[str, float]] = None,
-                       dependencies: Optional[List[str]] = None,
-                       metadata: Optional[Dict[str, Any]] = None) -> Task:
+                       required_resources: dict[str, float] | None = None,
+                       dependencies: list[str] | None = None,
+                       metadata: dict[str, Any] | None = None) -> Task:
         """
         Create an MPC-specific task with quantum-enhanced properties.
         
@@ -143,22 +150,22 @@ class QuantumScheduler:
             required_resources=required_resources or {},
             dependencies=dependencies or []
         )
-        
+
         # Add metadata
         if metadata:
             task.metadata = metadata
-        
+
         # Add to planner
         self.planner.add_task(task)
-        
+
         logger.debug(f"Created MPC task {task_id} of type {task_type}")
         return task
-    
-    def create_inference_workflow(self, 
+
+    def create_inference_workflow(self,
                                 model_name: str,
                                 input_data: Any,
-                                workflow_id: Optional[str] = None,
-                                priority: TaskPriority = TaskPriority.MEDIUM) -> List[Task]:
+                                workflow_id: str | None = None,
+                                priority: TaskPriority = TaskPriority.MEDIUM) -> list[Task]:
         """
         Create a complete inference workflow with quantum-optimized task dependencies.
         
@@ -173,7 +180,7 @@ class QuantumScheduler:
         """
         workflow_id = workflow_id or f"inference_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         tasks = []
-        
+
         # 1. Protocol initialization
         protocol_task = self.create_mpc_task(
             task_id=f"{workflow_id}_protocol_init",
@@ -184,7 +191,7 @@ class QuantumScheduler:
             metadata={"model": model_name, "workflow": workflow_id}
         )
         tasks.append(protocol_task)
-        
+
         # 2. Input embedding
         embedding_task = self.create_mpc_task(
             task_id=f"{workflow_id}_embedding",
@@ -196,7 +203,7 @@ class QuantumScheduler:
             metadata={"model": model_name, "workflow": workflow_id}
         )
         tasks.append(embedding_task)
-        
+
         # 3. Attention layers (assume 12 layers for BERT-like model)
         attention_tasks = []
         for layer_idx in range(12):
@@ -208,14 +215,14 @@ class QuantumScheduler:
                 required_resources={"gpu": 0.6, "memory": 0.4},
                 dependencies=[embedding_task.id if layer_idx == 0 else attention_tasks[-1].id],
                 metadata={
-                    "model": model_name, 
+                    "model": model_name,
                     "workflow": workflow_id,
                     "layer": layer_idx
                 }
             )
             tasks.append(attention_task)
             attention_tasks.append(attention_task)
-        
+
         # 4. Feed-forward layers
         ff_tasks = []
         for layer_idx in range(12):
@@ -234,7 +241,7 @@ class QuantumScheduler:
             )
             tasks.append(ff_task)
             ff_tasks.append(ff_task)
-        
+
         # 5. Result reconstruction
         reconstruction_task = self.create_mpc_task(
             task_id=f"{workflow_id}_reconstruction",
@@ -246,12 +253,12 @@ class QuantumScheduler:
             metadata={"model": model_name, "workflow": workflow_id}
         )
         tasks.append(reconstruction_task)
-        
+
         logger.info(f"Created inference workflow {workflow_id} with {len(tasks)} tasks")
         return tasks
-    
-    async def schedule_and_execute(self, 
-                                 task_filter: Optional[Callable[[Task], bool]] = None) -> Dict[str, Any]:
+
+    async def schedule_and_execute(self,
+                                 task_filter: Callable[[Task], bool] | None = None) -> dict[str, Any]:
         """
         Execute quantum-optimized scheduling and task execution.
         
@@ -263,16 +270,16 @@ class QuantumScheduler:
         """
         if self.status != SchedulerStatus.IDLE:
             raise RuntimeError(f"Scheduler is not idle (current status: {self.status})")
-        
+
         self.status = SchedulerStatus.RUNNING
         start_time = datetime.now()
-        
+
         try:
             # Get ready tasks
             ready_tasks = self.planner.get_ready_tasks()
             if task_filter:
                 ready_tasks = [task for task in ready_tasks if task_filter(task)]
-            
+
             if not ready_tasks:
                 logger.info("No ready tasks to schedule")
                 return {
@@ -280,41 +287,41 @@ class QuantumScheduler:
                     "execution_time": 0,
                     "tasks_processed": 0
                 }
-            
+
             # Quantum optimization phase
             optimization_start = datetime.now()
-            
+
             if self.config.quantum_optimization:
                 optimization_result = await self._optimize_task_schedule(ready_tasks)
                 logger.info(f"Quantum optimization completed in {optimization_result.optimization_time:.2f}s")
             else:
                 optimization_result = None
-            
+
             optimization_time = (datetime.now() - optimization_start).total_seconds()
             self.metrics.quantum_optimization_time += optimization_time
-            
+
             # Execute optimized plan
             execution_result = await self.planner.execute_quantum_plan()
-            
+
             # Update metrics
             self.metrics.tasks_scheduled += len(ready_tasks)
             self.metrics.tasks_completed += execution_result.get("tasks_completed", 0)
             self.metrics.total_execution_time += execution_result.get("execution_time", 0)
-            
+
             if self.metrics.tasks_completed > 0:
                 self.metrics.average_execution_time = (
                     self.metrics.total_execution_time / self.metrics.tasks_completed
                 )
-            
+
             # Fire completion callbacks
             for callback in self.task_callbacks['on_batch_complete']:
                 try:
                     callback(execution_result)
                 except Exception as e:
                     logger.error(f"Callback error: {e}")
-            
+
             total_time = (datetime.now() - start_time).total_seconds()
-            
+
             return {
                 "status": "completed",
                 "total_execution_time": total_time,
@@ -324,7 +331,7 @@ class QuantumScheduler:
                 "batches_executed": execution_result.get("batches_executed", 0),
                 "optimization_result": optimization_result.optimal_solution if optimization_result else None
             }
-            
+
         except Exception as e:
             self.status = SchedulerStatus.ERROR
             logger.error(f"Scheduler execution failed: {e}")
@@ -332,8 +339,8 @@ class QuantumScheduler:
         finally:
             if self.status != SchedulerStatus.ERROR:
                 self.status = SchedulerStatus.IDLE
-    
-    async def _optimize_task_schedule(self, tasks: List[Task]) -> OptimizationResult:
+
+    async def _optimize_task_schedule(self, tasks: list[Task]) -> OptimizationResult:
         """Run quantum optimization on task schedule"""
         # Convert tasks to optimization format
         task_dicts = []
@@ -347,14 +354,14 @@ class QuantumScheduler:
                 "dependencies": task.dependencies
             }
             task_dicts.append(task_dict)
-        
+
         # Define available resources
         resources = self.config.resource_limits or {
             "cpu": 1.0,
-            "memory": 1.0, 
+            "memory": 1.0,
             "gpu": 1.0
         }
-        
+
         # Run optimization
         from .optimization import OptimizationConstraints
         constraints = OptimizationConstraints(
@@ -362,35 +369,35 @@ class QuantumScheduler:
             max_memory_usage=1.0,
             max_gpu_usage=1.0
         )
-        
+
         return self.optimizer.optimize_task_schedule(task_dicts, constraints, resources)
-    
-    def get_task_status(self, task_id: str) -> Optional[TaskStatus]:
+
+    def get_task_status(self, task_id: str) -> TaskStatus | None:
         """Get current status of a task"""
         task = self.planner.get_task(task_id)
         return task.status if task else None
-    
+
     def cancel_task(self, task_id: str) -> bool:
         """Cancel a pending or running task"""
         with self._lock:
             task = self.planner.get_task(task_id)
             if not task:
                 return False
-            
+
             if task.status in [TaskStatus.PENDING, TaskStatus.RUNNING]:
                 task.status = TaskStatus.CANCELLED
-                
+
                 # Cancel future if exists
                 if task_id in self.task_futures:
                     future = self.task_futures[task_id]
                     future.cancel()
                     del self.task_futures[task_id]
-                
+
                 logger.info(f"Cancelled task {task_id}")
                 return True
-            
+
             return False
-    
+
     def pause_scheduler(self) -> bool:
         """Pause the scheduler"""
         if self.status == SchedulerStatus.RUNNING:
@@ -398,7 +405,7 @@ class QuantumScheduler:
             logger.info("Scheduler paused")
             return True
         return False
-    
+
     def resume_scheduler(self) -> bool:
         """Resume the scheduler"""
         if self.status == SchedulerStatus.PAUSED:
@@ -406,20 +413,20 @@ class QuantumScheduler:
             logger.info("Scheduler resumed")
             return True
         return False
-    
+
     def get_scheduler_metrics(self) -> SchedulerMetrics:
         """Get current scheduler metrics"""
         return self.metrics
-    
-    def get_active_tasks(self) -> List[Task]:
+
+    def get_active_tasks(self) -> list[Task]:
         """Get currently active (running) tasks"""
         return [task for task in self.planner.tasks.values() if task.status == TaskStatus.RUNNING]
-    
-    def get_pending_tasks(self) -> List[Task]:
+
+    def get_pending_tasks(self) -> list[Task]:
         """Get pending tasks"""
         return self.planner.get_pending_tasks()
-    
-    def estimate_completion_time(self, task_ids: Optional[List[str]] = None) -> float:
+
+    def estimate_completion_time(self, task_ids: list[str] | None = None) -> float:
         """
         Estimate completion time for specified tasks or all pending tasks.
         
@@ -433,21 +440,21 @@ class QuantumScheduler:
             tasks = [self.planner.get_task(tid) for tid in task_ids if self.planner.get_task(tid)]
         else:
             tasks = self.get_pending_tasks()
-        
+
         if not tasks:
             return 0.0
-        
+
         # Simple estimation based on average execution time and parallelism
         total_duration = sum(task.estimated_duration for task in tasks)
         parallel_capacity = self.config.max_concurrent_tasks
-        
+
         # Account for dependencies (simplified)
         dependency_penalty = 1.2  # 20% overhead for dependencies
-        
+
         estimated_time = (total_duration / parallel_capacity) * dependency_penalty
         return estimated_time
-    
-    def optimize_resource_allocation(self) -> Dict[str, float]:
+
+    def optimize_resource_allocation(self) -> dict[str, float]:
         """
         Optimize resource allocation for current workload.
         
@@ -457,26 +464,26 @@ class QuantumScheduler:
         pending_tasks = self.get_pending_tasks()
         if not pending_tasks:
             return {}
-        
+
         # Aggregate resource demands
         demands = {"cpu": 0.0, "memory": 0.0, "gpu": 0.0}
         for task in pending_tasks:
             for resource, amount in task.required_resources.items():
                 if resource in demands:
                     demands[resource] += amount
-        
+
         # Available resources
         available = self.config.resource_limits or {"cpu": 1.0, "memory": 1.0, "gpu": 1.0}
-        
+
         # Use quantum optimizer for allocation
         result = self.optimizer.optimize_resource_allocation(demands, available)
-        
+
         return result.optimal_solution
-    
-    def generate_schedule_report(self) -> Dict[str, Any]:
+
+    def generate_schedule_report(self) -> dict[str, Any]:
         """Generate comprehensive scheduling report"""
         stats = self.planner.get_execution_stats()
-        
+
         return {
             "scheduler_status": self.status.value,
             "metrics": {
@@ -499,17 +506,17 @@ class QuantumScheduler:
                 "adaptive_scheduling": self.config.enable_adaptive_scheduling
             }
         }
-    
+
     def cleanup(self):
         """Clean up scheduler resources"""
         self.status = SchedulerStatus.STOPPING
-        
+
         # Cancel all active futures
         for future in self.task_futures.values():
             future.cancel()
-        
+
         # Shutdown executor
         self._executor.shutdown(wait=True)
-        
+
         self.status = SchedulerStatus.IDLE
         logger.info("Scheduler cleanup completed")

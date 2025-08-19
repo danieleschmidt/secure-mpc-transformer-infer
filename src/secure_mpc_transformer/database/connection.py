@@ -1,11 +1,11 @@
 """Database connection management."""
 
-import os
 import asyncio
-from typing import Optional, Dict, Any, Union
-from contextlib import asynccontextmanager
 import logging
+import os
+from contextlib import asynccontextmanager
 from enum import Enum
+from typing import Any
 
 # Database drivers
 try:
@@ -39,8 +39,8 @@ class DatabaseType(Enum):
 
 class DatabaseManager:
     """Manages database connections and transactions."""
-    
-    def __init__(self, database_type: DatabaseType, connection_config: Dict[str, Any]):
+
+    def __init__(self, database_type: DatabaseType, connection_config: dict[str, Any]):
         self.database_type = database_type
         self.connection_config = connection_config
         self.pool = None
@@ -48,7 +48,7 @@ class DatabaseManager:
         self.mongo_client = None
         self.sqlite_path = None
         self.logger = logging.getLogger(__name__)
-        
+
     async def initialize(self) -> None:
         """Initialize database connections."""
         try:
@@ -62,18 +62,18 @@ class DatabaseManager:
                 await self._init_sqlite()
             else:
                 raise ValueError(f"Unsupported database type: {self.database_type}")
-                
+
             self.logger.info(f"Database connection initialized: {self.database_type.value}")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to initialize database: {e}")
             raise
-    
+
     async def _init_postgresql(self) -> None:
         """Initialize PostgreSQL connection pool."""
         if asyncpg is None:
             raise ImportError("asyncpg not installed. Install with: pip install asyncpg")
-        
+
         dsn = (
             f"postgresql://{self.connection_config['user']}:"
             f"{self.connection_config['password']}@"
@@ -81,7 +81,7 @@ class DatabaseManager:
             f"{self.connection_config['port']}/"
             f"{self.connection_config['database']}"
         )
-        
+
         self.pool = await asyncpg.create_pool(
             dsn,
             min_size=5,
@@ -92,32 +92,32 @@ class DatabaseManager:
                 'application_name': 'secure-mpc-transformer'
             }
         )
-    
+
     async def _init_mongodb(self) -> None:
         """Initialize MongoDB connection."""
         if motor is None:
             raise ImportError("motor not installed. Install with: pip install motor")
-        
+
         uri = self.connection_config.get('uri') or (
             f"mongodb://{self.connection_config['host']}:"
             f"{self.connection_config['port']}"
         )
-        
+
         self.mongo_client = motor.motor_asyncio.AsyncIOMotorClient(
             uri,
             maxPoolSize=20,
             minPoolSize=5,
             serverSelectionTimeoutMS=5000
         )
-        
+
         # Test connection
         await self.mongo_client.admin.command('ping')
-    
+
     async def _init_redis(self) -> None:
         """Initialize Redis connection."""
         if redis is None:
             raise ImportError("redis not installed. Install with: pip install redis[hiredis]")
-        
+
         self.redis_client = redis.Redis(
             host=self.connection_config['host'],
             port=self.connection_config['port'],
@@ -126,24 +126,24 @@ class DatabaseManager:
             decode_responses=True,
             max_connections=20
         )
-        
+
         # Test connection
         await self.redis_client.ping()
-    
+
     async def _init_sqlite(self) -> None:
         """Initialize SQLite connection."""
         if aiosqlite is None:
             raise ImportError("aiosqlite not installed. Install with: pip install aiosqlite")
-        
+
         self.sqlite_path = self.connection_config.get('path', 'secure_mpc_transformer.db')
-        
+
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(self.sqlite_path) or '.', exist_ok=True)
-        
+
         # Test connection
         async with aiosqlite.connect(self.sqlite_path) as db:
             await db.execute('SELECT 1')
-    
+
     @asynccontextmanager
     async def get_connection(self):
         """Get database connection context manager."""
@@ -159,7 +159,7 @@ class DatabaseManager:
                 yield connection
         else:
             raise ValueError(f"Unsupported database type: {self.database_type}")
-    
+
     @asynccontextmanager
     async def transaction(self):
         """Database transaction context manager."""
@@ -185,8 +185,8 @@ class DatabaseManager:
             # Redis doesn't support transactions in the same way
             async with self.get_connection() as connection:
                 yield connection
-    
-    async def execute_query(self, query: str, params: Optional[tuple] = None) -> Any:
+
+    async def execute_query(self, query: str, params: tuple | None = None) -> Any:
         """Execute a database query."""
         async with self.get_connection() as connection:
             if self.database_type == DatabaseType.POSTGRESQL:
@@ -203,8 +203,8 @@ class DatabaseManager:
                         return await cursor.fetchall()
             else:
                 raise NotImplementedError(f"Query execution not implemented for {self.database_type}")
-    
-    async def execute_update(self, query: str, params: Optional[tuple] = None) -> int:
+
+    async def execute_update(self, query: str, params: tuple | None = None) -> int:
         """Execute an update/insert/delete query."""
         async with self.get_connection() as connection:
             if self.database_type == DatabaseType.POSTGRESQL:
@@ -222,7 +222,7 @@ class DatabaseManager:
                 return connection.total_changes
             else:
                 raise NotImplementedError(f"Update execution not implemented for {self.database_type}")
-    
+
     async def close(self) -> None:
         """Close database connections."""
         try:
@@ -232,17 +232,17 @@ class DatabaseManager:
                 await self.redis_client.close()
             if self.mongo_client:
                 self.mongo_client.close()
-            
+
             self.logger.info("Database connections closed")
-            
+
         except Exception as e:
             self.logger.error(f"Error closing database connections: {e}")
-    
-    async def health_check(self) -> Dict[str, Any]:
+
+    async def health_check(self) -> dict[str, Any]:
         """Perform database health check."""
         try:
             start_time = asyncio.get_event_loop().time()
-            
+
             if self.database_type == DatabaseType.POSTGRESQL:
                 async with self.get_connection() as conn:
                     await conn.fetch('SELECT 1')
@@ -253,16 +253,16 @@ class DatabaseManager:
             elif self.database_type == DatabaseType.SQLITE:
                 async with self.get_connection() as conn:
                     await conn.execute('SELECT 1')
-            
+
             response_time = (asyncio.get_event_loop().time() - start_time) * 1000
-            
+
             return {
                 "status": "healthy",
                 "database_type": self.database_type.value,
                 "response_time_ms": round(response_time, 2),
                 "timestamp": asyncio.get_event_loop().time()
             }
-            
+
         except Exception as e:
             return {
                 "status": "unhealthy",
@@ -270,12 +270,12 @@ class DatabaseManager:
                 "error": str(e),
                 "timestamp": asyncio.get_event_loop().time()
             }
-    
+
     @classmethod
     def from_env(cls) -> "DatabaseManager":
         """Create DatabaseManager from environment variables."""
         db_type = DatabaseType(os.getenv('DATABASE_TYPE', 'postgresql'))
-        
+
         if db_type == DatabaseType.POSTGRESQL:
             config = {
                 'host': os.getenv('POSTGRES_HOST', 'localhost'),
@@ -304,16 +304,16 @@ class DatabaseManager:
             }
         else:
             raise ValueError(f"Unsupported database type: {db_type}")
-        
+
         return cls(db_type, config)
-    
-    def get_stats(self) -> Dict[str, Any]:
+
+    def get_stats(self) -> dict[str, Any]:
         """Get database connection statistics."""
         stats = {
             "database_type": self.database_type.value,
             "connection_config": {k: v for k, v in self.connection_config.items() if 'password' not in k.lower()}
         }
-        
+
         if self.database_type == DatabaseType.POSTGRESQL and self.pool:
             stats.update({
                 "pool_size": self.pool.get_size(),
@@ -321,5 +321,5 @@ class DatabaseManager:
                 "pool_max_size": self.pool.get_max_size(),
                 "pool_min_size": self.pool.get_min_size()
             })
-        
+
         return stats

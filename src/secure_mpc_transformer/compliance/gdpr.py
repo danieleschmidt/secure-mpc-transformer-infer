@@ -14,19 +14,19 @@ This module implements comprehensive GDPR compliance features including:
 import hashlib
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Union
-from enum import Enum
-from dataclasses import dataclass, asdict
-from cryptography.fernet import Fernet
 import uuid
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any
+
+from cryptography.fernet import Fernet
 
 from .base import (
-    ComplianceFramework, 
-    DataSubjectRequest, 
-    DataClassification,
+    AuditLog,
+    ComplianceFramework,
     ConsentRecord,
-    AuditLog
+    DataSubjectRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class GDPRLegalBasis(Enum):
     """GDPR lawful bases for processing personal data."""
     CONSENT = "consent"
-    CONTRACT = "contract" 
+    CONTRACT = "contract"
     LEGAL_OBLIGATION = "legal_obligation"
     VITAL_INTERESTS = "vital_interests"
     PUBLIC_TASK = "public_task"
@@ -72,11 +72,11 @@ class GDPRDataRecord:
     record_id: str
     data_subject_id: str
     data_category: GDPRDataCategory
-    processing_purpose: List[GDPRProcessingPurpose]
+    processing_purpose: list[GDPRProcessingPurpose]
     legal_basis: GDPRLegalBasis
     created_at: datetime
-    retention_period: Optional[timedelta] = None
-    consent_id: Optional[str] = None
+    retention_period: timedelta | None = None
+    consent_id: str | None = None
     is_pseudonymized: bool = False
     is_encrypted: bool = False
     data_controller: str = ""
@@ -85,8 +85,8 @@ class GDPRDataRecord:
 @dataclass
 class GDPRConsentRecord(ConsentRecord):
     """GDPR-specific consent record with granular controls."""
-    processing_purposes: List[GDPRProcessingPurpose]
-    data_categories: List[GDPRDataCategory]
+    processing_purposes: list[GDPRProcessingPurpose]
+    data_categories: list[GDPRDataCategory]
     third_party_sharing: bool = False
     marketing_consent: bool = False
     profiling_consent: bool = False
@@ -95,7 +95,7 @@ class GDPRConsentRecord(ConsentRecord):
 
 class GDPRConsentManager:
     """Manage GDPR consent with granular purpose and category controls."""
-    
+
     def __init__(self, storage_backend=None):
         """
         Initialize GDPR consent manager.
@@ -106,11 +106,11 @@ class GDPRConsentManager:
         self.storage = storage_backend or {}
         self._encryption_key = Fernet.generate_key()
         self._cipher = Fernet(self._encryption_key)
-    
+
     def record_consent(self,
                       data_subject_id: str,
-                      processing_purposes: List[GDPRProcessingPurpose],
-                      data_categories: List[GDPRDataCategory],
+                      processing_purposes: list[GDPRProcessingPurpose],
+                      data_categories: list[GDPRDataCategory],
                       consent_method: str = "explicit",
                       **kwargs) -> str:
         """
@@ -127,7 +127,7 @@ class GDPRConsentManager:
             Consent ID
         """
         consent_id = str(uuid.uuid4())
-        
+
         # Generate consent proof hash
         consent_data = {
             "subject_id": data_subject_id,
@@ -137,7 +137,7 @@ class GDPRConsentManager:
             "method": consent_method
         }
         consent_proof = hashlib.sha256(json.dumps(consent_data, sort_keys=True).encode()).hexdigest()
-        
+
         consent_record = GDPRConsentRecord(
             consent_id=consent_id,
             data_subject_id=data_subject_id,
@@ -149,18 +149,18 @@ class GDPRConsentManager:
             consent_proof=consent_proof,
             **kwargs
         )
-        
+
         # Encrypt and store consent record
         encrypted_record = self._cipher.encrypt(json.dumps(asdict(consent_record)).encode())
         self.storage[consent_id] = encrypted_record
-        
+
         logger.info(f"GDPR consent recorded: {consent_id} for subject {data_subject_id}")
         return consent_id
-    
+
     def withdraw_consent(self,
                         data_subject_id: str,
-                        consent_id: Optional[str] = None,
-                        purposes: Optional[List[GDPRProcessingPurpose]] = None) -> bool:
+                        consent_id: str | None = None,
+                        purposes: list[GDPRProcessingPurpose] | None = None) -> bool:
         """
         Withdraw GDPR consent (fully or partially).
         
@@ -177,7 +177,7 @@ class GDPRConsentManager:
             if consent_id in self.storage:
                 record_data = json.loads(self._cipher.decrypt(self.storage[consent_id]).decode())
                 record = GDPRConsentRecord(**record_data)
-                
+
                 if record.data_subject_id == data_subject_id:
                     if purposes:
                         # Partial withdrawal for specific purposes
@@ -189,11 +189,11 @@ class GDPRConsentManager:
                         # Full withdrawal
                         record.granted = False
                         record.withdrawn_at = datetime.utcnow()
-                    
+
                     # Update stored record
                     encrypted_record = self._cipher.encrypt(json.dumps(asdict(record)).encode())
                     self.storage[consent_id] = encrypted_record
-                    
+
                     logger.info(f"GDPR consent withdrawn: {consent_id}")
                     return True
             return False
@@ -206,14 +206,14 @@ class GDPRConsentManager:
                     record = GDPRConsentRecord(**record_data)
                     record.granted = False
                     record.withdrawn_at = datetime.utcnow()
-                    
+
                     encrypted_record = self._cipher.encrypt(json.dumps(asdict(record)).encode())
                     self.storage[cid] = encrypted_record
                     withdrawn_count += 1
-            
+
             logger.info(f"GDPR consent withdrawn for all {withdrawn_count} records for subject {data_subject_id}")
             return withdrawn_count > 0
-    
+
     def check_consent(self,
                      data_subject_id: str,
                      purpose: GDPRProcessingPurpose,
@@ -233,27 +233,27 @@ class GDPRConsentManager:
             try:
                 record_data = json.loads(self._cipher.decrypt(encrypted_record).decode())
                 record = GDPRConsentRecord(**record_data)
-                
+
                 if (record.data_subject_id == data_subject_id and
                     record.granted and
                     not record.withdrawn_at and
                     purpose in record.processing_purposes and
                     data_category in record.data_categories):
-                    
+
                     # Check if consent is still valid (not expired)
                     if record.expires_at and datetime.utcnow() > record.expires_at:
                         continue
-                    
+
                     return True
             except Exception as e:
                 logger.error(f"Error checking consent record: {e}")
                 continue
-        
+
         return False
 
 class GDPRDataProcessor:
     """Process GDPR data subject requests and manage data lifecycle."""
-    
+
     def __init__(self, data_storage=None, consent_manager=None):
         """
         Initialize GDPR data processor.
@@ -267,8 +267,8 @@ class GDPRDataProcessor:
         self._audit_log = []
         self._encryption_key = Fernet.generate_key()
         self._cipher = Fernet(self._encryption_key)
-    
-    def process_access_request(self, data_subject_id: str) -> Dict[str, Any]:
+
+    def process_access_request(self, data_subject_id: str) -> dict[str, Any]:
         """
         Process GDPR Article 15 access request.
         
@@ -279,7 +279,7 @@ class GDPRDataProcessor:
             Dictionary containing all personal data
         """
         self._log_request("access", data_subject_id)
-        
+
         # Collect all data for the subject
         subject_data = {
             "personal_data": [],
@@ -290,7 +290,7 @@ class GDPRDataProcessor:
             "retention_periods": [],
             "rights_information": self._get_rights_information()
         }
-        
+
         # Find all data records for the subject
         for record_id, record_data in self.data_storage.items():
             if isinstance(record_data, dict) and record_data.get('data_subject_id') == data_subject_id:
@@ -302,7 +302,7 @@ class GDPRDataProcessor:
                     except Exception as e:
                         logger.error(f"Failed to decrypt data for access request: {e}")
                         continue
-                
+
                 subject_data["personal_data"].append({
                     "record_id": record_id,
                     "data_category": record_data.get('category'),
@@ -310,7 +310,7 @@ class GDPRDataProcessor:
                     "created_at": record_data.get('created_at'),
                     "data": record_data.get('data') if not record_data.get('is_pseudonymized') else "[PSEUDONYMIZED]"
                 })
-        
+
         # Add consent records
         for consent_id, encrypted_record in self.consent_manager.storage.items():
             try:
@@ -324,11 +324,11 @@ class GDPRDataProcessor:
                     })
             except Exception as e:
                 logger.error(f"Error processing consent record for access request: {e}")
-        
+
         logger.info(f"GDPR access request processed for subject {data_subject_id}")
         return subject_data
-    
-    def process_erasure_request(self, 
+
+    def process_erasure_request(self,
                                data_subject_id: str,
                                reason: str = "withdrawal_of_consent") -> bool:
         """
@@ -342,9 +342,9 @@ class GDPRDataProcessor:
             Success status
         """
         self._log_request("erasure", data_subject_id, {"reason": reason})
-        
+
         erased_count = 0
-        
+
         # Find and delete/anonymize all data for the subject
         records_to_delete = []
         for record_id, record_data in self.data_storage.items():
@@ -355,19 +355,19 @@ class GDPRDataProcessor:
                 else:
                     # If cannot delete, pseudonymize
                     self._pseudonymize_record(record_id, record_data)
-        
+
         # Delete records
         for record_id in records_to_delete:
             del self.data_storage[record_id]
             erased_count += 1
-        
+
         # Withdraw all consents
         self.consent_manager.withdraw_consent(data_subject_id)
-        
+
         logger.info(f"GDPR erasure request processed: {erased_count} records erased for subject {data_subject_id}")
         return erased_count > 0
-    
-    def process_portability_request(self, data_subject_id: str) -> Dict[str, Any]:
+
+    def process_portability_request(self, data_subject_id: str) -> dict[str, Any]:
         """
         Process GDPR Article 20 portability request.
         
@@ -378,19 +378,19 @@ class GDPRDataProcessor:
             Portable data in structured format
         """
         self._log_request("portability", data_subject_id)
-        
+
         portable_data = {
             "data_subject_id": data_subject_id,
             "export_date": datetime.utcnow().isoformat(),
             "data": []
         }
-        
+
         # Collect portable data (only consent-based processing)
         for record_id, record_data in self.data_storage.items():
-            if (isinstance(record_data, dict) and 
+            if (isinstance(record_data, dict) and
                 record_data.get('data_subject_id') == data_subject_id and
                 record_data.get('legal_basis') == GDPRLegalBasis.CONSENT.value):
-                
+
                 # Decrypt if necessary
                 if record_data.get('encrypted', False):
                     try:
@@ -399,19 +399,19 @@ class GDPRDataProcessor:
                     except Exception as e:
                         logger.error(f"Failed to decrypt data for portability request: {e}")
                         continue
-                
+
                 portable_data["data"].append({
                     "category": record_data.get('category'),
                     "created_at": record_data.get('created_at'),
                     "data": record_data.get('data') if not record_data.get('is_pseudonymized') else None
                 })
-        
+
         logger.info(f"GDPR portability request processed for subject {data_subject_id}")
         return portable_data
-    
+
     def process_rectification_request(self,
                                      data_subject_id: str,
-                                     corrections: Dict[str, Any]) -> bool:
+                                     corrections: dict[str, Any]) -> bool:
         """
         Process GDPR Article 16 rectification request.
         
@@ -423,9 +423,9 @@ class GDPRDataProcessor:
             Success status
         """
         self._log_request("rectification", data_subject_id, {"corrections": corrections})
-        
+
         updated_count = 0
-        
+
         # Find and update records
         for record_id, record_data in self.data_storage.items():
             if isinstance(record_data, dict) and record_data.get('data_subject_id') == data_subject_id:
@@ -434,7 +434,7 @@ class GDPRDataProcessor:
                     if field in record_data.get('data', {}):
                         old_value = record_data['data'][field]
                         record_data['data'][field] = new_value
-                        
+
                         # Log the change
                         self._audit_log.append(AuditLog(
                             log_id=str(uuid.uuid4()),
@@ -448,51 +448,51 @@ class GDPRDataProcessor:
                                 "new_value": "[REDACTED]"
                             }
                         ))
-                        
+
                         updated_count += 1
-                
+
                 # Re-encrypt if necessary
                 if record_data.get('encrypted', False):
                     encrypted_data = self._cipher.encrypt(json.dumps(record_data['data']).encode())
                     record_data['data'] = encrypted_data.decode()
-        
+
         logger.info(f"GDPR rectification request processed: {updated_count} fields updated for subject {data_subject_id}")
         return updated_count > 0
-    
-    def _can_erase_data(self, record_data: Dict[str, Any], reason: str) -> bool:
+
+    def _can_erase_data(self, record_data: dict[str, Any], reason: str) -> bool:
         """Check if data can be erased based on legal basis and other factors."""
         legal_basis = record_data.get('legal_basis')
-        
+
         # Cannot erase if legal obligation or vital interests
         if legal_basis in [GDPRLegalBasis.LEGAL_OBLIGATION.value, GDPRLegalBasis.VITAL_INTERESTS.value]:
             return False
-        
+
         # Cannot erase if within legal retention period
         retention_until = record_data.get('retention_until')
         if retention_until and datetime.utcnow() < datetime.fromisoformat(retention_until):
             return False
-        
+
         # Can erase if consent withdrawn or other valid reasons
         return reason in ["withdrawal_of_consent", "objection_to_processing", "unlawful_processing"]
-    
-    def _pseudonymize_record(self, record_id: str, record_data: Dict[str, Any]) -> None:
+
+    def _pseudonymize_record(self, record_id: str, record_data: dict[str, Any]) -> None:
         """Pseudonymize a data record instead of deleting it."""
         # Generate pseudonym
         pseudonym = hashlib.sha256(f"{record_id}{record_data.get('data_subject_id')}".encode()).hexdigest()[:16]
-        
+
         # Replace identifiable data with pseudonym
         record_data['data_subject_id'] = pseudonym
         record_data['is_pseudonymized'] = True
-        
+
         # Remove or hash direct identifiers in data
         if 'data' in record_data and isinstance(record_data['data'], dict):
             for key, value in record_data['data'].items():
                 if key in ['email', 'name', 'phone', 'address', 'ip_address']:
                     record_data['data'][key] = hashlib.sha256(str(value).encode()).hexdigest()[:16]
-        
+
         logger.info(f"Record {record_id} pseudonymized")
-    
-    def _get_rights_information(self) -> Dict[str, str]:
+
+    def _get_rights_information(self) -> dict[str, str]:
         """Get information about GDPR data subject rights."""
         return {
             "access": "You have the right to access your personal data",
@@ -503,8 +503,8 @@ class GDPRDataProcessor:
             "objection": "You have the right to object to processing of your personal data",
             "contact": "Contact our Data Protection Officer at dpo@mpc-transformer.com"
         }
-    
-    def _log_request(self, request_type: str, data_subject_id: str, details: Dict = None) -> None:
+
+    def _log_request(self, request_type: str, data_subject_id: str, details: dict = None) -> None:
         """Log GDPR request for audit purposes."""
         audit_entry = AuditLog(
             log_id=str(uuid.uuid4()),
@@ -517,8 +517,8 @@ class GDPRDataProcessor:
 
 class GDPRCompliance(ComplianceFramework):
     """Main GDPR compliance framework implementation."""
-    
-    def __init__(self, config: Dict[str, Any]):
+
+    def __init__(self, config: dict[str, Any]):
         """
         Initialize GDPR compliance framework.
         
@@ -526,12 +526,12 @@ class GDPRCompliance(ComplianceFramework):
             config: GDPR configuration parameters
         """
         super().__init__("gdpr", config)
-        
+
         self.data_controller = config.get("data_controller", {})
         self.dpo_contact = config.get("dpo_contact", "")
         self.consent_manager = GDPRConsentManager()
         self.data_processor = GDPRDataProcessor(consent_manager=self.consent_manager)
-        
+
         # Initialize breach notification settings
         self.breach_notification = config.get("breach_notification", {
             "authority_deadline_hours": 72,
@@ -539,8 +539,8 @@ class GDPRCompliance(ComplianceFramework):
             "authority_contact": "",
             "breach_register": []
         })
-    
-    def process_data_subject_request(self, request: DataSubjectRequest) -> Dict[str, Any]:
+
+    def process_data_subject_request(self, request: DataSubjectRequest) -> dict[str, Any]:
         """
         Process GDPR data subject request.
         
@@ -551,12 +551,12 @@ class GDPRCompliance(ComplianceFramework):
             Request processing result
         """
         request_type = request.request_type.lower()
-        
+
         if request_type == "access":
             return self.data_processor.process_access_request(request.data_subject_id)
         elif request_type == "erasure":
             success = self.data_processor.process_erasure_request(
-                request.data_subject_id, 
+                request.data_subject_id,
                 request.details.get("reason", "withdrawal_of_consent")
             )
             return {"success": success, "message": "Erasure request processed"}
@@ -570,7 +570,7 @@ class GDPRCompliance(ComplianceFramework):
             return {"success": success, "message": "Rectification request processed"}
         else:
             raise ValueError(f"Unsupported GDPR request type: {request_type}")
-    
+
     def validate_processing(self,
                            data_category: str,
                            purpose: str,
@@ -594,13 +594,13 @@ class GDPRCompliance(ComplianceFramework):
         except ValueError:
             logger.error(f"Invalid GDPR legal basis: {legal_basis}")
             return False
-        
+
         # If consent-based, check consent
         if legal_basis_enum == GDPRLegalBasis.CONSENT and data_subject_id:
             try:
                 category_enum = GDPRDataCategory(data_category)
                 purpose_enum = GDPRProcessingPurpose(purpose)
-                
+
                 has_consent = self.consent_manager.check_consent(
                     data_subject_id, purpose_enum, category_enum
                 )
@@ -610,17 +610,17 @@ class GDPRCompliance(ComplianceFramework):
             except ValueError:
                 logger.error(f"Invalid category or purpose: {data_category}, {purpose}")
                 return False
-        
+
         # Additional validation based on data category
         if data_category == GDPRDataCategory.SENSITIVE_DATA.value:
             # Special categories require explicit consent or other specific legal basis
             if legal_basis_enum not in [GDPRLegalBasis.CONSENT, GDPRLegalBasis.LEGAL_OBLIGATION]:
                 logger.error("Sensitive data requires explicit consent or legal obligation")
                 return False
-        
+
         return True
-    
-    def generate_compliance_report(self) -> Dict[str, Any]:
+
+    def generate_compliance_report(self) -> dict[str, Any]:
         """
         Generate comprehensive GDPR compliance report.
         
@@ -646,35 +646,35 @@ class GDPRCompliance(ComplianceFramework):
             },
             "compliance_status": {
                 "consent_management": "compliant",
-                "data_subject_rights": "compliant", 
+                "data_subject_rights": "compliant",
                 "breach_notification": "compliant",
                 "data_protection_measures": "compliant"
             },
             "recommendations": self._generate_recommendations()
         }
-    
-    def _generate_recommendations(self) -> List[str]:
+
+    def _generate_recommendations(self) -> list[str]:
         """Generate compliance recommendations based on current state."""
         recommendations = []
-        
+
         # Check consent coverage
         total_records = len(self.data_processor.data_storage)
         consent_based_records = len([
             r for r in self.data_processor.data_storage.values()
             if isinstance(r, dict) and r.get('legal_basis') == GDPRLegalBasis.CONSENT.value
         ])
-        
+
         if consent_based_records / max(total_records, 1) > 0.5:
             recommendations.append("Consider implementing consent renewal mechanism")
-        
+
         # Check data retention
         old_records = len([
             r for r in self.data_processor.data_storage.values()
             if isinstance(r, dict) and 'created_at' in r and
             datetime.fromisoformat(r['created_at']) < datetime.utcnow() - timedelta(days=730)
         ])
-        
+
         if old_records > 0:
             recommendations.append(f"Review {old_records} old records for retention compliance")
-        
+
         return recommendations

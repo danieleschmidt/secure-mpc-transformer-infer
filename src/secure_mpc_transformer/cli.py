@@ -1,16 +1,14 @@
 """Command-line interface for secure MPC transformer."""
 
-import asyncio
 import argparse
-import sys
-import os
-from typing import Optional
 import logging
+import os
+import sys
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from .config import SecurityConfig, ProtocolType, SecurityLevel
+from .config import ProtocolType, SecurityConfig, SecurityLevel
 from .models.secure_transformer import SecureTransformer
 from .protocols.factory import ProtocolFactory
 
@@ -44,25 +42,25 @@ def cmd_inference(args) -> None:
     """Run secure inference."""
     print(f"Running secure inference with model: {args.model}")
     print(f"Input text: {args.text}")
-    
+
     # Create security configuration
     config = create_security_config(args)
     config.validate()
-    
+
     # Initialize secure transformer
     model = SecureTransformer.from_pretrained(args.model, config)
-    
+
     # Perform secure inference
     result = model.predict_secure(args.text)
-    
-    print(f"\nResults:")
+
+    print("\nResults:")
     print(f"  Predicted text: {result.decoded_text}")
     print(f"  Latency: {result.latency_ms:.2f} ms")
     print(f"  Protocol: {config.protocol.value}")
     print(f"  Security level: {config.security_level.value} bits")
-    
+
     if args.verbose:
-        print(f"\nDetailed statistics:")
+        print("\nDetailed statistics:")
         for key, value in result.computation_stats.items():
             print(f"  {key}: {value}")
 
@@ -70,16 +68,16 @@ def cmd_inference(args) -> None:
 def cmd_benchmark(args) -> None:
     """Run performance benchmark."""
     print(f"Benchmarking model: {args.model}")
-    
+
     config = create_security_config(args)
     config.validate()
-    
+
     model = SecureTransformer.from_pretrained(args.model, config)
-    
+
     print(f"Running {args.iterations} iterations...")
     results = model.benchmark(num_inferences=args.iterations, sequence_length=args.sequence_length)
-    
-    print(f"\nBenchmark Results:")
+
+    print("\nBenchmark Results:")
     print(f"  Average latency: {results['avg_latency_ms']:.2f} ms")
     print(f"  Min latency: {results['min_latency_ms']:.2f} ms")
     print(f"  Max latency: {results['max_latency_ms']:.2f} ms")
@@ -90,9 +88,9 @@ def cmd_protocols(args) -> None:
     """List available protocols."""
     print("Available MPC Protocols:")
     print("========================")
-    
+
     protocols = ProtocolFactory.get_available_protocols()
-    
+
     for protocol_name in protocols:
         try:
             info = ProtocolFactory.get_protocol_info(protocol_name)
@@ -111,7 +109,7 @@ def cmd_server(args) -> None:
     print(f"Starting MPC server on {args.host}:{args.port}")
     print(f"Party ID: {args.party_id}/{args.num_parties}")
     print(f"Protocol: {args.protocol}")
-    
+
     # This would start the actual server
     print("Server functionality not yet implemented.")
     print("This would start a gRPC server for multi-party computation.")
@@ -120,17 +118,17 @@ def cmd_server(args) -> None:
 def cmd_test_protocol(args) -> None:
     """Test protocol functionality."""
     print(f"Testing protocol: {args.protocol}")
-    
+
     config = create_security_config(args)
     protocol = ProtocolFactory.create_from_config(config)
-    
+
     print(f"Protocol info: {protocol.get_protocol_info()}")
-    
+
     # Run basic test if available
     if hasattr(protocol, 'benchmark_operations'):
         print("Running protocol benchmark...")
         results = protocol.benchmark_operations(num_ops=10)
-        
+
         print("Benchmark results:")
         for operation, time_ms in results.items():
             print(f"  {operation}: {time_ms:.2f} ms")
@@ -151,10 +149,10 @@ Examples:
   %(prog)s server --party-id 0 --num-parties 3
         """
     )
-    
+
     # Global arguments
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
-    parser.add_argument('--protocol', default='semi_honest_3pc', 
+    parser.add_argument('--protocol', default='semi_honest_3pc',
                        choices=['semi_honest_3pc', 'malicious_3pc', 'aby3', 'replicated_3pc'],
                        help='MPC protocol to use')
     parser.add_argument('--security-level', type=int, default=128, choices=[80, 128, 256],
@@ -167,35 +165,35 @@ Examples:
     parser.add_argument('--tls', action='store_true', help='Enable TLS')
     parser.add_argument('--batch-size', type=int, default=32, help='Batch size')
     parser.add_argument('--threads', type=int, default=8, help='Number of threads')
-    
+
     # Subcommands
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
-    
+
     # Inference command
     inference_parser = subparsers.add_parser('inference', help='Run secure inference')
     inference_parser.add_argument('--text', required=True, help='Input text for inference')
     inference_parser.add_argument('--model', default='bert-base-uncased', help='Model name')
-    
+
     # Benchmark command
     benchmark_parser = subparsers.add_parser('benchmark', help='Run performance benchmark')
     benchmark_parser.add_argument('--model', default='bert-base-uncased', help='Model name')
     benchmark_parser.add_argument('--iterations', type=int, default=10, help='Number of iterations')
     benchmark_parser.add_argument('--sequence-length', type=int, default=128, help='Input sequence length')
-    
+
     # Protocols command
     subparsers.add_parser('protocols', help='List available protocols')
-    
+
     # Server command
     server_parser = subparsers.add_parser('server', help='Start MPC server')
-    
+
     # Test protocol command
     test_parser = subparsers.add_parser('test-protocol', help='Test protocol functionality')
-    
+
     args = parser.parse_args()
-    
+
     # Setup logging
     setup_logging(args.verbose)
-    
+
     # Execute command
     if args.command == 'inference':
         cmd_inference(args)

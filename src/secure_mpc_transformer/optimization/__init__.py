@@ -10,16 +10,16 @@ This module provides advanced optimization techniques including:
 - Memory-mapped file support
 """
 
-from .model_optimizer import ModelOptimizer, OptimizationConfig
-from .gpu_manager import GPUMemoryManager, CUDAStreamManager
-from .tensor_fusion import TensorFusionEngine, FusionConfig
-from .simd_operations import SIMDProcessor
 from .adaptive_batching import AdaptiveBatchManager
+from .gpu_manager import CUDAStreamManager, GPUMemoryManager
 from .memory_mapper import MemoryMappedModelLoader
+from .model_optimizer import ModelOptimizer, OptimizationConfig
+from .simd_operations import SIMDProcessor
+from .tensor_fusion import FusionConfig, TensorFusionEngine
 
 __all__ = [
     'ModelOptimizer',
-    'OptimizationConfig', 
+    'OptimizationConfig',
     'GPUMemoryManager',
     'CUDAStreamManager',
     'TensorFusionEngine',

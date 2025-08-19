@@ -2,16 +2,16 @@
 
 from .autonomous_quality_gate import (
     AutonomousQualityGate,
-    QualityMetric,
+    QualityCategory,
     QualityGateConfig,
+    QualityMetric,
     QualityStatus,
-    QualityCategory
 )
 
 __all__ = [
     "AutonomousQualityGate",
     "QualityMetric",
     "QualityGateConfig",
-    "QualityStatus", 
+    "QualityStatus",
     "QualityCategory"
 ]
