@@ -1,0 +1,33 @@
+{
+  "timestamp": "2025-08-23T01:21:54.786543",
+  "execution_summary": {
+    "overall_status": "PASSED",
+    "total_execution_time_seconds": 1.070927619934082,
+    "total_gates": 12,
+    "total_passed": 10,
+    "overall_success_rate": 83.33333333333334
+  },
+  "generation_results": {
+    "generation_1": {
+      "passed": 3,
+      "total": 4,
+      "success_rate": 75.0,
+      "duration": 1.020892858505249,
+      "status": "PASSED"
+    },
+    "generation_2": {
+      "passed": 3,
+      "total": 4,
+      "success_rate": 75.0,
+      "duration": 0.034864187240600586,
+      "status": "PASSED"
+    },
+    "generation_3": {
+      "passed": 4,
+      "total": 4,
+      "success_rate": 100.0,
+      "duration": 0.015044212341308594,
+      "status": "PASSED"
+    }
+  }
+}
