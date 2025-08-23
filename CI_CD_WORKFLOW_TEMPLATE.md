@@ -1,3 +1,10 @@
+# CI/CD Workflow Template
+
+Due to GitHub App permissions, the CI/CD workflow cannot be automatically created in `.github/workflows/`. 
+
+Please manually create `.github/workflows/ci-cd.yml` with the following content:
+
+```yaml
 name: CI/CD Pipeline
 
 on:
@@ -96,3 +103,13 @@ jobs:
       run: |
         # Add deployment commands here
         echo "Deploying to production..."
+```
+
+## Manual Setup Instructions
+
+1. Go to your repository on GitHub
+2. Create a new file at `.github/workflows/ci-cd.yml`
+3. Copy and paste the content above
+4. Commit the file
+
+This will enable the full CI/CD pipeline for your project.
