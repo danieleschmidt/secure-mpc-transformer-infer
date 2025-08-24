@@ -1,0 +1,250 @@
+{
+  "basic_resilience": {
+    "operation_results": {
+      "quantum_state_preparation": {
+        "status": "success",
+        "execution_time": 1.3059706687927246,
+        "attempts": 2,
+        "quantum_coherence": 0.8793680088514451
+      },
+      "entanglement_generation": {
+        "status": "success",
+        "execution_time": 0.10045623779296875,
+        "attempts": 1,
+        "quantum_coherence": 0.9047572215476751
+      },
+      "mpc_secure_computation": {
+        "status": "success",
+        "execution_time": 0.10046696662902832,
+        "attempts": 1,
+        "quantum_coherence": 0.8709521397311017
+      },
+      "quantum_error_mitigation": {
+        "status": "success",
+        "execution_time": 0.10063838958740234,
+        "attempts": 1,
+        "quantum_coherence": 0.8520620160059248
+      },
+      "result_verification": {
+        "status": "success",
+        "execution_time": 0.10043835639953613,
+        "attempts": 1,
+        "quantum_coherence": 0.8752268667928411
+      }
+    },
+    "resilience_metrics": {
+      "total_errors": 1,
+      "successful_recoveries": 1,
+      "success_rate": 1.0,
+      "average_recovery_time": 0.10068082809448242,
+      "resilience_score": 1.0,
+      "error_distribution": {
+        "quantum_decoherence": 1,
+        "entanglement_loss": 0,
+        "mpc_protocol_failure": 0,
+        "network_partition": 0,
+        "resource_exhaustion": 0,
+        "timing_attack": 0,
+        "state_corruption": 0
+      },
+      "circuit_breaker_metrics": {
+        "state": "closed",
+        "failure_count": 1,
+        "success_count": 5,
+        "avg_recent_coherence": 0.8764732505857976,
+        "current_error_rate": 1.0,
+        "last_failure_time": "2025-08-23T22:28:37.477654"
+      }
+    },
+    "success_rate": 1.0
+  },
+  "error_recovery": {
+    "recovery_results": {
+      "quantum_decoherence": {
+        "success": true,
+        "recovery_method": "_recover_from_decoherence",
+        "execution_time": 0.10068702697753906,
+        "coherence_restored": 0.5310010778557936,
+        "errors_corrected": 2
+      },
+      "entanglement_loss": {
+        "success": true,
+        "recovery_method": "_recover_entanglement",
+        "execution_time": 0.20075345039367676,
+        "coherence_restored": 0.6954651692869833,
+        "errors_corrected": 2
+      },
+      "mpc_protocol_failure": {
+        "success": false,
+        "recovery_method": "_recover_mpc_protocol",
+        "execution_time": 0.15053009986877441,
+        "coherence_restored": 0.0,
+        "errors_corrected": 0
+      },
+      "network_partition": {
+        "success": true,
+        "recovery_method": "_recover_from_partition",
+        "execution_time": 0.5010430812835693,
+        "coherence_restored": 0.8996396576986845,
+        "errors_corrected": 2
+      },
+      "resource_exhaustion": {
+        "success": true,
+        "recovery_method": "_recover_resources",
+        "execution_time": 0.30115389823913574,
+        "coherence_restored": 0.7951747248567109,
+        "errors_corrected": 3
+      },
+      "timing_attack": {
+        "success": true,
+        "recovery_method": "_recover_from_timing_attack",
+        "execution_time": 0.10080385208129883,
+        "coherence_restored": 0.8796690032477983,
+        "errors_corrected": 1
+      },
+      "state_corruption": {
+        "success": true,
+        "recovery_method": "_recover_quantum_state",
+        "execution_time": 0.40133213996887207,
+        "coherence_restored": 0.6899438961085712,
+        "errors_corrected": 6
+      }
+    },
+    "success_rate": 0.8571428571428571,
+    "average_recovery_time": 0.2509005069732666
+  },
+  "circuit_breaker": {
+    "test_results": [
+      {
+        "attempt": 1,
+        "status": "success",
+        "execution_time": 0.1004481315612793,
+        "circuit_state": "closed"
+      },
+      {
+        "attempt": 2,
+        "status": "failed",
+        "execution_time": 0.10074448585510254,
+        "circuit_state": "closed",
+        "error": "Network partition during MPC protocol"
+      },
+      {
+        "attempt": 3,
+        "status": "failed",
+        "execution_time": 0.10071039199829102,
+        "circuit_state": "closed",
+        "error": "Network partition during MPC protocol"
+      },
+      {
+        "attempt": 4,
+        "status": "failed",
+        "execution_time": 0.10064387321472168,
+        "circuit_state": "closed",
+        "error": "Resource exhaustion: insufficient memory"
+      },
+      {
+        "attempt": 5,
+        "status": "failed",
+        "execution_time": 0.10064911842346191,
+        "circuit_state": "open",
+        "error": "Resource exhaustion: insufficient memory"
+      },
+      {
+        "attempt": 6,
+        "status": "failed",
+        "execution_time": 6.437301635742188e-05,
+        "circuit_state": "open",
+        "error": "Circuit breaker is open - operation blocked"
+      },
+      {
+        "attempt": 7,
+        "status": "failed",
+        "execution_time": 2.2649765014648438e-05,
+        "circuit_state": "open",
+        "error": "Circuit breaker is open - operation blocked"
+      },
+      {
+        "attempt": 8,
+        "status": "failed",
+        "execution_time": 2.002716064453125e-05,
+        "circuit_state": "open",
+        "error": "Circuit breaker is open - operation blocked"
+      }
+    ],
+    "circuit_breaker_metrics": {
+      "state": "open",
+      "failure_count": 5,
+      "success_count": 6,
+      "avg_recent_coherence": 0.8429914693396231,
+      "current_error_rate": 0.45454545454545453,
+      "last_failure_time": "2025-08-23T22:28:41.751233"
+    },
+    "circuit_opened": true
+  },
+  "health_monitoring": {
+    "initial_health": {
+      "overall_health": "degraded",
+      "quantum_subsystems": {
+        "error_correction": "operational",
+        "circuit_breaker": "open",
+        "recovery_framework": "operational"
+      },
+      "recommendations": [
+        "Circuit breaker is open"
+      ]
+    },
+    "final_health": {
+      "overall_health": "degraded",
+      "quantum_subsystems": {
+        "error_correction": "operational",
+        "circuit_breaker": "open",
+        "recovery_framework": "operational"
+      },
+      "recommendations": [
+        "Circuit breaker is open"
+      ]
+    },
+    "resilience_metrics": {
+      "total_errors": 13,
+      "successful_recoveries": 9,
+      "success_rate": 0.6923076923076923,
+      "average_recovery_time": 0.2007901851947491,
+      "resilience_score": 0.8153846153846154,
+      "error_distribution": {
+        "quantum_decoherence": 1,
+        "entanglement_loss": 0,
+        "mpc_protocol_failure": 5,
+        "network_partition": 0,
+        "resource_exhaustion": 0,
+        "timing_attack": 0,
+        "state_corruption": 0
+      },
+      "circuit_breaker_metrics": {
+        "state": "open",
+        "failure_count": 5,
+        "success_count": 6,
+        "avg_recent_coherence": 0.8429914693396231,
+        "current_error_rate": 0.45454545454545453,
+        "last_failure_time": "2025-08-23T22:28:41.751233"
+      }
+    }
+  },
+  "summary": {
+    "demonstration_completed": true,
+    "total_execution_time": 7.534473896026611,
+    "robustness_achievements": [
+      "\ud83d\udee1\ufe0f 100.0% basic resilience success rate",
+      "\u26a1 85.7% error recovery success rate",
+      "\ud83d\udd0c Circuit breaker protection demonstrated",
+      "\ud83c\udfe5 Health monitoring with real-time metrics",
+      "\u23f1\ufe0f Average recovery time: 0.25s"
+    ],
+    "reliability_metrics": {
+      "overall_resilience": 1.0,
+      "error_recovery_rate": 0.8571428571428571,
+      "circuit_protection": true,
+      "health_monitoring": "degraded",
+      "total_operations_tested": 23
+    }
+  }
+}
