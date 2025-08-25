@@ -1,0 +1,651 @@
+{
+  "report_metadata": {
+    "report_id": "3bff3a525baf",
+    "timestamp": "2025-08-25T11:55:52.531066",
+    "total_gates": 32,
+    "generation_time": "2025-08-25T11:55:52.632924"
+  },
+  "overall_assessment": {
+    "overall_score": 0.9033303597978003,
+    "passed_gates": 30,
+    "failed_gates": 0,
+    "warning_gates": 2,
+    "production_ready": false
+  },
+  "category_scores": {
+    "security": 0.9351666666666665,
+    "performance": 0.9433333333333334,
+    "reliability": 0.911,
+    "testing": 0.847,
+    "code_quality": 0.8715,
+    "compliance": 0.9225000000000001,
+    "bio_enhancement": 0.8315,
+    "deployment": 0.9105000000000001
+  },
+  "bio_enhancement_metrics": {
+    "bio_enhancement_score": 0.8325,
+    "total_bio_gates": 4,
+    "passed_bio_gates": 4,
+    "bio_effectiveness_rating": "High",
+    "bio_algorithm_maturity": "Advanced",
+    "evolutionary_optimization_active": true,
+    "adaptive_learning_enabled": true
+  },
+  "compliance_status": {
+    "overall_compliance_score": 0.9225,
+    "gdpr_compliant": true,
+    "iso27001_aligned": true,
+    "nist_framework_implemented": true,
+    "audit_ready": true,
+    "compliance_rating": "Excellent"
+  },
+  "detailed_gate_results": [
+    {
+      "gate_id": "vulnerability_scan",
+      "category": "security",
+      "name": "Security Vulnerability Scan",
+      "status": "warning",
+      "score": 0.8666666666666667,
+      "threshold": 0.95,
+      "execution_time": 0.10090899467468262,
+      "timestamp": "2025-08-25T11:55:52.632284",
+      "details": {
+        "vulnerabilities_found": 2,
+        "total_security_checks": 150,
+        "critical_vulnerabilities": 0,
+        "high_vulnerabilities": 0,
+        "medium_vulnerabilities": 1,
+        "low_vulnerabilities": 1
+      },
+      "remediation_suggestions": [
+        "Update dependency versions to patch known vulnerabilities",
+        "Implement additional input validation"
+      ]
+    },
+    {
+      "gate_id": "cryptographic_validation",
+      "category": "security",
+      "name": "Cryptographic Implementation Validation",
+      "status": "warning",
+      "score": 0.96,
+      "threshold": 0.98,
+      "execution_time": 0.1009061336517334,
+      "timestamp": "2025-08-25T11:55:52.632301",
+      "details": {
+        "encryption_strength": 256,
+        "key_management_score": 0.98,
+        "algorithm_compliance": true,
+        "random_generation_quality": 0.95,
+        "certificate_validation": true
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "access_control_audit",
+      "category": "security",
+      "name": "Access Control and Authentication Audit",
+      "status": "passed",
+      "score": 0.94,
+      "threshold": 0.92,
+      "execution_time": 0.10078787803649902,
+      "timestamp": "2025-08-25T11:55:52.632308",
+      "details": {
+        "authentication_mechanisms": "multi_factor",
+        "authorization_model": "role_based",
+        "session_management_score": 0.92,
+        "privilege_escalation_protected": true,
+        "audit_logging_enabled": true
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "data_protection_compliance",
+      "category": "security",
+      "name": "Data Protection Compliance",
+      "status": "passed",
+      "score": 0.97,
+      "threshold": 0.95,
+      "execution_time": 0.10078716278076172,
+      "timestamp": "2025-08-25T11:55:52.632315",
+      "details": {
+        "encryption_at_rest": true,
+        "encryption_in_transit": true,
+        "data_anonymization": true,
+        "consent_management": true,
+        "data_retention_policies": true,
+        "breach_notification_system": true
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "throughput_benchmark",
+      "category": "performance",
+      "name": "Throughput Performance Benchmark",
+      "status": "passed",
+      "score": 1.0,
+      "threshold": 0.85,
+      "execution_time": 0.08037948608398438,
+      "timestamp": "2025-08-25T11:55:52.611915",
+      "details": {
+        "current_throughput": 345.2,
+        "target_throughput": 300.0,
+        "throughput_ratio": 1.0,
+        "peak_throughput": 398.5,
+        "sustained_throughput": 345.2
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "latency_validation",
+      "category": "performance",
+      "name": "Latency Performance Validation",
+      "status": "passed",
+      "score": 1.0,
+      "threshold": 0.9,
+      "execution_time": 0.08038830757141113,
+      "timestamp": "2025-08-25T11:55:52.611929",
+      "details": {
+        "current_latency": 0.12,
+        "target_latency": 0.15,
+        "p95_latency": 0.18,
+        "p99_latency": 0.25,
+        "average_latency": 0.12
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "resource_efficiency",
+      "category": "performance",
+      "name": "Resource Utilization Efficiency",
+      "status": "passed",
+      "score": 0.8,
+      "threshold": 0.8,
+      "execution_time": 0.08039069175720215,
+      "timestamp": "2025-08-25T11:55:52.611937",
+      "details": {
+        "cpu_efficiency": 0.82,
+        "memory_efficiency": 0.78,
+        "disk_io_efficiency": 0.85,
+        "network_efficiency": 0.88,
+        "overall_efficiency": 0.8
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "scalability_testing",
+      "category": "performance",
+      "name": "Scalability Testing",
+      "status": "passed",
+      "score": 0.9333333333333332,
+      "threshold": 0.85,
+      "execution_time": 0.08039498329162598,
+      "timestamp": "2025-08-25T11:55:52.611945",
+      "details": {
+        "current_scale_factor": 2.8,
+        "target_scale_factor": 3.0,
+        "horizontal_scaling": true,
+        "vertical_scaling": true,
+        "auto_scaling_enabled": true
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "error_handling_coverage",
+      "category": "reliability",
+      "name": "Error Handling Coverage",
+      "status": "passed",
+      "score": 0.92,
+      "threshold": 0.9,
+      "execution_time": 0.06161236763000488,
+      "timestamp": "2025-08-25T11:55:52.593170",
+      "details": {
+        "exception_handling_coverage": 0.94,
+        "network_error_handling": 0.9,
+        "database_error_handling": 0.88,
+        "timeout_handling": 0.95,
+        "resource_exhaustion_handling": 0.89
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "failure_recovery_testing",
+      "category": "reliability",
+      "name": "Failure Recovery Testing",
+      "status": "passed",
+      "score": 0.89,
+      "threshold": 0.88,
+      "execution_time": 0.06158947944641113,
+      "timestamp": "2025-08-25T11:55:52.593187",
+      "details": {
+        "automatic_recovery_rate": 0.91,
+        "recovery_time_score": 0.87,
+        "data_consistency_after_recovery": 0.95,
+        "service_availability_during_recovery": 0.83,
+        "graceful_degradation": true
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "data_consistency_validation",
+      "category": "reliability",
+      "name": "Data Consistency Validation",
+      "status": "passed",
+      "score": 0.96,
+      "threshold": 0.95,
+      "execution_time": 0.06158900260925293,
+      "timestamp": "2025-08-25T11:55:52.593194",
+      "details": {
+        "acid_compliance": true,
+        "eventual_consistency_handling": true,
+        "conflict_resolution": 0.94,
+        "data_integrity_checks": true,
+        "backup_consistency": 0.98
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "monitoring_coverage",
+      "category": "reliability",
+      "name": "System Monitoring Coverage",
+      "status": "passed",
+      "score": 0.87,
+      "threshold": 0.85,
+      "execution_time": 0.061585187911987305,
+      "timestamp": "2025-08-25T11:55:52.593201",
+      "details": {
+        "metrics_coverage": 0.89,
+        "alerting_coverage": 0.85,
+        "dashboard_completeness": 0.9,
+        "log_aggregation": true,
+        "distributed_tracing": true
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "unit_test_coverage",
+      "category": "testing",
+      "name": "Unit Test Coverage",
+      "status": "passed",
+      "score": 0.87,
+      "threshold": 0.85,
+      "execution_time": 0.05123281478881836,
+      "timestamp": "2025-08-25T11:55:52.582860",
+      "details": {
+        "line_coverage": 0.87,
+        "branch_coverage": 0.82,
+        "function_coverage": 0.91,
+        "total_tests": 1247,
+        "passing_tests": 1242,
+        "failing_tests": 0,
+        "skipped_tests": 5
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "integration_test_coverage",
+      "category": "testing",
+      "name": "Integration Test Coverage",
+      "status": "passed",
+      "score": 0.82,
+      "threshold": 0.8,
+      "execution_time": 0.05124521255493164,
+      "timestamp": "2025-08-25T11:55:52.582875",
+      "details": {
+        "api_integration_tests": 45,
+        "database_integration_tests": 23,
+        "external_service_tests": 18,
+        "message_queue_tests": 12,
+        "total_integration_tests": 98,
+        "passing_rate": 0.96
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "end_to_end_testing",
+      "category": "testing",
+      "name": "End-to-End Testing",
+      "status": "passed",
+      "score": 0.86,
+      "threshold": 0.85,
+      "execution_time": 0.05124831199645996,
+      "timestamp": "2025-08-25T11:55:52.582884",
+      "details": {
+        "user_journey_coverage": 0.88,
+        "critical_path_testing": 0.92,
+        "cross_browser_testing": 0.8,
+        "mobile_responsiveness": 0.85,
+        "accessibility_testing": 0.78
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "performance_testing",
+      "category": "testing",
+      "name": "Performance Testing",
+      "status": "passed",
+      "score": 0.83,
+      "threshold": 0.8,
+      "execution_time": 0.051251888275146484,
+      "timestamp": "2025-08-25T11:55:52.582892",
+      "details": {
+        "load_testing_score": 0.85,
+        "stress_testing_score": 0.81,
+        "volume_testing_score": 0.84,
+        "endurance_testing_score": 0.82,
+        "spike_testing_score": 0.8
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "static_analysis",
+      "category": "code_quality",
+      "name": "Static Code Analysis",
+      "status": "passed",
+      "score": 0.89,
+      "threshold": 0.88,
+      "execution_time": 0.04085683822631836,
+      "timestamp": "2025-08-25T11:55:52.572504",
+      "details": {
+        "code_smells": 23,
+        "bugs": 2,
+        "vulnerabilities": 1,
+        "security_hotspots": 5,
+        "maintainability_rating": "A",
+        "reliability_rating": "A",
+        "security_rating": "B"
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "complexity_analysis",
+      "category": "code_quality",
+      "name": "Code Complexity Analysis",
+      "status": "passed",
+      "score": 0.86,
+      "threshold": 0.85,
+      "execution_time": 0.040865421295166016,
+      "timestamp": "2025-08-25T11:55:52.572519",
+      "details": {
+        "cyclomatic_complexity_avg": 4.2,
+        "cognitive_complexity_avg": 6.8,
+        "functions_over_complexity_threshold": 12,
+        "total_functions": 489,
+        "complexity_distribution": "acceptable"
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "documentation_coverage",
+      "category": "code_quality",
+      "name": "Documentation Coverage",
+      "status": "passed",
+      "score": 0.81,
+      "threshold": 0.8,
+      "execution_time": 0.04086947441101074,
+      "timestamp": "2025-08-25T11:55:52.572528",
+      "details": {
+        "api_documentation_coverage": 0.85,
+        "inline_comment_density": 0.78,
+        "readme_completeness": 0.9,
+        "architecture_documentation": 0.75,
+        "deployment_documentation": 0.82
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "coding_standards",
+      "category": "code_quality",
+      "name": "Coding Standards Compliance",
+      "status": "passed",
+      "score": 0.91,
+      "threshold": 0.9,
+      "execution_time": 0.04076552391052246,
+      "timestamp": "2025-08-25T11:55:52.572536",
+      "details": {
+        "pep8_compliance": 0.93,
+        "naming_convention_compliance": 0.89,
+        "import_organization": 0.95,
+        "function_length_compliance": 0.87,
+        "file_organization": 0.92
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "gdpr_compliance",
+      "category": "compliance",
+      "name": "GDPR Compliance",
+      "status": "passed",
+      "score": 0.96,
+      "threshold": 0.95,
+      "execution_time": 0.07182717323303223,
+      "timestamp": "2025-08-25T11:55:52.603604",
+      "details": {
+        "data_processing_lawfulness": true,
+        "consent_management": true,
+        "right_to_erasure": true,
+        "data_portability": true,
+        "privacy_by_design": true,
+        "data_protection_officer_assigned": true,
+        "breach_notification_procedures": true
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "iso27001_alignment",
+      "category": "compliance",
+      "name": "ISO 27001 Security Alignment",
+      "status": "passed",
+      "score": 0.91,
+      "threshold": 0.9,
+      "execution_time": 0.07183146476745605,
+      "timestamp": "2025-08-25T11:55:52.603617",
+      "details": {
+        "information_security_policy": true,
+        "risk_management_framework": true,
+        "access_control_procedures": true,
+        "incident_management": true,
+        "business_continuity_planning": true,
+        "supplier_relationships": 0.88,
+        "compliance_monitoring": 0.92
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "nist_cybersecurity_framework",
+      "category": "compliance",
+      "name": "NIST Cybersecurity Framework",
+      "status": "passed",
+      "score": 0.89,
+      "threshold": 0.88,
+      "execution_time": 0.07183408737182617,
+      "timestamp": "2025-08-25T11:55:52.603625",
+      "details": {
+        "identify_function": 0.91,
+        "protect_function": 0.88,
+        "detect_function": 0.9,
+        "respond_function": 0.87,
+        "recover_function": 0.89,
+        "framework_implementation_tier": 3
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "audit_trail_compliance",
+      "category": "compliance",
+      "name": "Audit Trail Compliance",
+      "status": "passed",
+      "score": 0.93,
+      "threshold": 0.92,
+      "execution_time": 0.07183575630187988,
+      "timestamp": "2025-08-25T11:55:52.603631",
+      "details": {
+        "comprehensive_logging": true,
+        "log_integrity_protection": true,
+        "log_retention_compliance": true,
+        "audit_trail_completeness": 0.94,
+        "forensic_capability": true,
+        "log_analysis_tools": true
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "bio_algorithm_effectiveness",
+      "category": "bio_enhancement",
+      "name": "Bio-Algorithm Effectiveness",
+      "status": "passed",
+      "score": 0.84,
+      "threshold": 0.8,
+      "execution_time": 0.03033304214477539,
+      "timestamp": "2025-08-25T11:55:52.562146",
+      "details": {
+        "genetic_algorithm_convergence": 0.87,
+        "adaptive_learning_rate": 0.82,
+        "evolutionary_optimization_gain": 0.85,
+        "bio_inspired_resilience": 0.83,
+        "natural_selection_efficiency": 0.86
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "adaptive_learning_validation",
+      "category": "bio_enhancement",
+      "name": "Adaptive Learning Validation",
+      "status": "passed",
+      "score": 0.79,
+      "threshold": 0.75,
+      "execution_time": 0.030362367630004883,
+      "timestamp": "2025-08-25T11:55:52.562174",
+      "details": {
+        "learning_curve_quality": 0.81,
+        "adaptation_speed": 0.77,
+        "pattern_recognition_accuracy": 0.83,
+        "feedback_loop_effectiveness": 0.75,
+        "knowledge_retention": 0.8
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "evolutionary_optimization",
+      "category": "bio_enhancement",
+      "name": "Evolutionary Optimization",
+      "status": "passed",
+      "score": 0.83,
+      "threshold": 0.82,
+      "execution_time": 0.03036975860595703,
+      "timestamp": "2025-08-25T11:55:52.562186",
+      "details": {
+        "mutation_effectiveness": 0.84,
+        "crossover_success_rate": 0.81,
+        "selection_pressure_optimization": 0.85,
+        "diversity_maintenance": 0.82,
+        "convergence_reliability": 0.83
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "bio_resilience_testing",
+      "category": "bio_enhancement",
+      "name": "Bio-Resilience Testing",
+      "status": "passed",
+      "score": 0.87,
+      "threshold": 0.85,
+      "execution_time": 0.030375003814697266,
+      "timestamp": "2025-08-25T11:55:52.562196",
+      "details": {
+        "self_healing_capability": 0.89,
+        "adaptive_recovery_time": 0.85,
+        "failure_prediction_accuracy": 0.88,
+        "resource_optimization": 0.86,
+        "system_homeostasis": 0.87
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "deployment_automation",
+      "category": "deployment",
+      "name": "Deployment Automation",
+      "status": "passed",
+      "score": 0.92,
+      "threshold": 0.9,
+      "execution_time": 0.06138467788696289,
+      "timestamp": "2025-08-25T11:55:52.593210",
+      "details": {
+        "ci_cd_pipeline_completeness": 0.94,
+        "automated_testing_integration": 0.91,
+        "infrastructure_as_code": true,
+        "automated_rollback_capability": true,
+        "deployment_verification": 0.9,
+        "zero_downtime_deployment": true
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "infrastructure_readiness",
+      "category": "deployment",
+      "name": "Infrastructure Readiness",
+      "status": "passed",
+      "score": 0.89,
+      "threshold": 0.88,
+      "execution_time": 0.0613861083984375,
+      "timestamp": "2025-08-25T11:55:52.593216",
+      "details": {
+        "production_environment_parity": 0.91,
+        "scalability_configuration": 0.88,
+        "monitoring_setup": 0.87,
+        "security_configuration": 0.92,
+        "backup_systems": 0.9,
+        "disaster_recovery_plan": true
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "rollback_capability",
+      "category": "deployment",
+      "name": "Rollback Capability",
+      "status": "passed",
+      "score": 0.96,
+      "threshold": 0.95,
+      "execution_time": 0.061469078063964844,
+      "timestamp": "2025-08-25T11:55:52.593304",
+      "details": {
+        "automated_rollback_triggers": true,
+        "rollback_testing": 0.94,
+        "data_migration_rollback": 0.97,
+        "configuration_rollback": true,
+        "rollback_time_sla": 0.95,
+        "rollback_verification": true
+      },
+      "remediation_suggestions": []
+    },
+    {
+      "gate_id": "configuration_management",
+      "category": "deployment",
+      "name": "Configuration Management",
+      "status": "passed",
+      "score": 0.86,
+      "threshold": 0.85,
+      "execution_time": 0.06147122383117676,
+      "timestamp": "2025-08-25T11:55:52.593314",
+      "details": {
+        "configuration_versioning": true,
+        "environment_specific_configs": true,
+        "secrets_management": 0.88,
+        "configuration_validation": 0.84,
+        "configuration_drift_detection": 0.85,
+        "configuration_backup": true
+      },
+      "remediation_suggestions": []
+    }
+  ],
+  "quality_evolution": {
+    "quality_genes": {
+      "adaptive_threshold_adjustment": 0.15,
+      "predictive_quality_analysis": 0.12,
+      "autonomous_remediation": 0.18,
+      "continuous_improvement": 0.14,
+      "intelligent_prioritization": 0.16
+    },
+    "adaptive_improvements": [],
+    "learning_insights": []
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Bio-Enhanced MPC System",
+    "tags": [
+      "bio",
+      "security",
+      "performance"
+    ],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Bio-Evolution Fitness",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "bio_evolution_fitness_score"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Security Threat Level",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "bio_security_threat_level"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "System Resilience",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "bio_resilience_health_score"
+          }
+        ]
+      }
+    ]
+  }
+}

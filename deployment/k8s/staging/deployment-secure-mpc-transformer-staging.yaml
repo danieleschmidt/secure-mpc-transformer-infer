@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: "secure-mpc-transformer-staging"
+    namespace: "secure-mpc-transformer-staging"
+    labels:
+      app: "secure-mpc-transformer"
+      environment: "staging"
+      version: "1.0.0"
+      bio-enhanced: "true"
+spec:
+    replicas: 3
+    selector:
+      matchLabels:
+        app: "secure-mpc-transformer"
+        environment: "staging"
+    template:
+      metadata:
+        labels:
+          app: "secure-mpc-transformer"
+          environment: "staging"
+      spec:
+        containers:
+          - 
+            name: "secure-mpc-transformer"
+            image: "secure-mpc-transformer:1.0.0"
+            ports:
+              - 
+                containerPort: 8080
+                name: "http"
+            resources:
+              requests:
+                cpu: "1000m"
+                memory: "2Gi"
+              limits:
+                cpu: "2000m"
+                memory: "4Gi"
+            env:
+              - 
+                name: "ENVIRONMENT"
+                value: "staging"
+              - 
+                name: "VERSION"
+                value: "1.0.0"
+              - 
+                name: "BIO_EVOLUTION_ENABLED"
+                value: "true"
+              - 
+                name: "LOG_LEVEL"
+                value: "DEBUG"
+            livenessProbe:
+              httpGet:
+                path: "/health"
+                port: 8080
+              initialDelaySeconds: 30
+              periodSeconds: 30
+            readinessProbe:
+              httpGet:
+                path: "/ready"
+                port: 8080
+              initialDelaySeconds: 10
+              periodSeconds: 15

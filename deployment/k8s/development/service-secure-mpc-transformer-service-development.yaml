@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: "secure-mpc-transformer-service-development"
+    namespace: "secure-mpc-transformer-development"
+    labels:
+      app: "secure-mpc-transformer"
+      environment: "development"
+spec:
+    selector:
+      app: "secure-mpc-transformer"
+      environment: "development"
+    ports:
+      - 
+        port: 80
+        targetPort: 8080
+        protocol: "TCP"
+        name: "http"
+    type: "ClusterIP"

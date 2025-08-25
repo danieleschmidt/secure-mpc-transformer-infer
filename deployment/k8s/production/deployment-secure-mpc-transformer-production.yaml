@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: "secure-mpc-transformer-production"
+    namespace: "secure-mpc-transformer-production"
+    labels:
+      app: "secure-mpc-transformer"
+      environment: "production"
+      version: "1.0.0"
+      bio-enhanced: "true"
+spec:
+    replicas: 5
+    selector:
+      matchLabels:
+        app: "secure-mpc-transformer"
+        environment: "production"
+    template:
+      metadata:
+        labels:
+          app: "secure-mpc-transformer"
+          environment: "production"
+      spec:
+        containers:
+          - 
+            name: "secure-mpc-transformer"
+            image: "secure-mpc-transformer:1.0.0"
+            ports:
+              - 
+                containerPort: 8080
+                name: "http"
+            resources:
+              requests:
+                cpu: "2000m"
+                memory: "4Gi"
+              limits:
+                cpu: "4000m"
+                memory: "8Gi"
+            env:
+              - 
+                name: "ENVIRONMENT"
+                value: "production"
+              - 
+                name: "VERSION"
+                value: "1.0.0"
+              - 
+                name: "BIO_EVOLUTION_ENABLED"
+                value: "true"
+              - 
+                name: "LOG_LEVEL"
+                value: "INFO"
+            livenessProbe:
+              httpGet:
+                path: "/health"
+                port: 8080
+              initialDelaySeconds: 30
+              periodSeconds: 30
+            readinessProbe:
+              httpGet:
+                path: "/ready"
+                port: 8080
+              initialDelaySeconds: 10
+              periodSeconds: 15
