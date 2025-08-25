@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+    name: "secure-mpc-transformer-service-staging"
+    namespace: "secure-mpc-transformer-staging"
+    labels:
+      app: "secure-mpc-transformer"
+      environment: "staging"
+spec:
+    selector:
+      app: "secure-mpc-transformer"
+      environment: "staging"
+    ports:
+      - 
+        port: 80
+        targetPort: 8080
+        protocol: "TCP"
+        name: "http"
+    type: "ClusterIP"

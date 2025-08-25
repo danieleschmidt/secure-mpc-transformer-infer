@@ -1,0 +1,29 @@
+groups:
+  - name: bio-evolution-alerts
+    rules:
+      - alert: BioEvolutionStagnation
+        expr: bio_evolution_fitness_improvement_rate < 0.01
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Bio-evolution system showing stagnation"
+          description: "Fitness improvement rate has been below threshold for 10 minutes"
+          
+      - alert: DefensiveSecurityThreatLevel
+        expr: bio_security_threat_level > 0.8
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High threat level detected by defensive security"
+          description: "Threat level {{ $value }} exceeds critical threshold"
+          
+      - alert: ResilienceHealthDegraded
+        expr: bio_resilience_health_score < 0.7
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "System resilience health degraded"
+          description: "Resilience health score is {{ $value }}, below acceptable threshold"

@@ -1,0 +1,45 @@
+{
+  "deployment_id": "secure-mpc-transformer-1.0.0-1756123465",
+  "project_name": "secure-mpc-transformer",
+  "version": "1.0.0",
+  "timestamp": "2025-08-25T12:04:25.595171+00:00",
+  "environments": [
+    "development",
+    "staging",
+    "production"
+  ],
+  "total_manifests": 9,
+  "bio_features_enabled": {
+    "evolution": true,
+    "defensive_security": true,
+    "resilience": true,
+    "performance_optimization": true,
+    "adaptive_scaling": true
+  },
+  "deployment_capabilities": [
+    "kubernetes_native",
+    "docker_containerized",
+    "horizontal_autoscaling",
+    "health_monitoring",
+    "bio_evolution_tracking",
+    "security_threat_detection",
+    "self_healing_resilience",
+    "performance_optimization",
+    "ci_cd_integration"
+  ],
+  "monitoring_features": [
+    "prometheus_metrics",
+    "grafana_dashboards",
+    "alerting_rules",
+    "health_checks",
+    "bio_system_telemetry"
+  ],
+  "security_features": [
+    "rbac_enabled",
+    "pod_security_policies",
+    "network_policies",
+    "secrets_management",
+    "encryption_at_rest",
+    "defensive_threat_detection"
+  ]
+}
