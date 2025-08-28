@@ -18,8 +18,17 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import lz4.frame
-import zstd
+try:
+    import lz4.frame
+    LZ4_AVAILABLE = True
+except ImportError:
+    LZ4_AVAILABLE = False
+    
+try:
+    import zstd
+    ZSTD_AVAILABLE = True
+except ImportError:
+    ZSTD_AVAILABLE = False
 
 from .eviction_policies import EvictionPolicy, LRUPolicy
 
@@ -107,7 +116,7 @@ class CompressionEngine:
                 compressed_data = gzip.compress(data, compresslevel=self.config.compression_level)
                 algorithm = CompressionAlgorithm.GZIP
 
-            elif self.config.algorithm == CompressionAlgorithm.LZ4:
+            elif self.config.algorithm == CompressionAlgorithm.LZ4 and LZ4_AVAILABLE:
                 compressed_data = lz4.frame.compress(
                     data,
                     compression_level=self.config.compression_level,
@@ -115,7 +124,7 @@ class CompressionEngine:
                 )
                 algorithm = CompressionAlgorithm.LZ4
 
-            elif self.config.algorithm == CompressionAlgorithm.ZSTD:
+            elif self.config.algorithm == CompressionAlgorithm.ZSTD and ZSTD_AVAILABLE:
                 compressed_data = zstd.compress(
                     data,
                     level=self.config.compression_level
@@ -158,10 +167,10 @@ class CompressionEngine:
             if algorithm == CompressionAlgorithm.GZIP:
                 decompressed_data = gzip.decompress(data)
 
-            elif algorithm == CompressionAlgorithm.LZ4:
+            elif algorithm == CompressionAlgorithm.LZ4 and LZ4_AVAILABLE:
                 decompressed_data = lz4.frame.decompress(data)
 
-            elif algorithm == CompressionAlgorithm.ZSTD:
+            elif algorithm == CompressionAlgorithm.ZSTD and ZSTD_AVAILABLE:
                 decompressed_data = zstd.decompress(data)
 
             decompression_time = time.perf_counter() - start_time
